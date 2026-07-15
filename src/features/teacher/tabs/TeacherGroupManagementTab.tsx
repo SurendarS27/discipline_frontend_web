@@ -44,7 +44,7 @@ export default function TeacherGroupManagementTab() {
         setYears(["All", ...Array.from(yearSet).sort()]);
         setSections(["All", ...Array.from(sectionSet).sort()]);
       }
-    } catch (e) {
+    } catch (e: any) {
       console.error("Error fetching teams", e);
     } finally {
       setIsLoading(false);
@@ -79,7 +79,7 @@ export default function TeacherGroupManagementTab() {
       } else {
         alert(response.data.message || "Failed to update group limit");
       }
-    } catch (e) {
+    } catch (e: any) {
       alert(`Error: ${e.message}`);
     }
   };
@@ -96,7 +96,7 @@ export default function TeacherGroupManagementTab() {
       } else {
         alert(response.data.message || "Failed to add member");
       }
-    } catch (e) {
+    } catch (e: any) {
       alert(`Error: ${e.message}`);
     }
   };
@@ -112,7 +112,7 @@ export default function TeacherGroupManagementTab() {
       } else {
         alert(response.data.message || "Failed to remove member");
       }
-    } catch (e) {
+    } catch (e: any) {
       alert(`Error: ${e.message}`);
     }
   };

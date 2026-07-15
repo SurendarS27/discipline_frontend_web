@@ -93,7 +93,7 @@ export default function RemovalRequestsTab() {
       } else {
         alert(response.data.message || 'Failed to update request');
       }
-    } catch (e) {
+    } catch (e: any) {
       alert(`Error: ${e.message}`);
     }
   };

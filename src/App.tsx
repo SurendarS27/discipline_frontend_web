@@ -7,6 +7,11 @@ import StudentDashboardPage from './features/student/StudentDashboardPage';
 import CaptainDashboardPage from './features/captain/CaptainDashboardPage';
 import ProtectedRoute from './components/ProtectedRoute';
 
+import GroupActivityYearPage from './features/admin/activity/pages/GroupActivityYearPage';
+import GroupActivityExecutionPage from './features/admin/activity/pages/GroupActivityExecutionPage';
+import ActivityExecutionPageV2 from './features/admin/activity/pages/ActivityExecutionPageV2';
+import StudentsDirectoryPage from './features/teacher/pages/StudentsDirectoryPage';
+
 function App() {
   return (
     <BrowserRouter>
@@ -30,6 +35,43 @@ function App() {
             </ProtectedRoute>
           } 
         />
+        
+        {/* CC Students Directory */}
+        <Route 
+          path="/teacher/students-directory" 
+          element={
+            <ProtectedRoute allowedRoles={['TEACHER', 'ADMIN']}>
+              <StudentsDirectoryPage />
+            </ProtectedRoute>
+          } 
+        />
+
+        {/* --- Phase 3: Execution Pages --- */}
+        <Route 
+          path="/teacher/group-activity/:activityId/year" 
+          element={
+            <ProtectedRoute allowedRoles={['TEACHER', 'ADMIN']}>
+              <GroupActivityYearPage />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/teacher/group-activity/:activityId/execution" 
+          element={
+            <ProtectedRoute allowedRoles={['TEACHER', 'ADMIN']}>
+              <GroupActivityExecutionPage />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/teacher/activity/:activityId/execution" 
+          element={
+            <ProtectedRoute allowedRoles={['TEACHER', 'ADMIN']}>
+              <ActivityExecutionPageV2 />
+            </ProtectedRoute>
+          } 
+        />
+        {/* ---------------------------------- */}
         
         <Route 
           path="/student/*" 

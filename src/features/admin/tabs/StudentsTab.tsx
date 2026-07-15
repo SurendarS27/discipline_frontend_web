@@ -164,71 +164,64 @@ export default function StudentsTab({ onBack }: Props) {
   };
 
   return (
-    <div className="flex flex-col min-h-full bg-slate-50">
-      <div className="bg-slate-900 px-6 pt-12 pb-6">
-        <div className="flex items-center space-x-4 mb-6">
+    <div className="flex flex-col min-h-full bg-slate-50 relative pb-20">
+      <div className="bg-slate-900 px-6 pt-12 pb-4 shadow-md z-10">
+        <div className="flex items-center space-x-4 mb-2">
           {onBack && (
-            <button onClick={onBack} className="p-2 bg-slate-800 rounded-full text-white hover:bg-slate-700">
+            <button onClick={onBack} className="p-2 bg-slate-800 rounded-full text-white hover:bg-slate-700 transition-colors">
               <ArrowLeft className="w-5 h-5" />
             </button>
           )}
           <h1 className="text-2xl font-bold text-white flex-1">Student Management</h1>
-          <button onClick={fetchStudents} className="p-2 bg-slate-800 rounded-full text-white hover:bg-slate-700">
-            <RefreshCw className={`w-5 h-5 ${isLoading ? 'animate-spin' : ''}`} />
-          </button>
         </div>
-        
-        <div className="relative">
-          <Search className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+      </div>
+
+      <div className="flex-1 p-4 md:p-6 max-w-5xl mx-auto w-full">
+        <div className="mb-6 relative">
+          <Search className="w-5 h-5 absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
           <input 
             type="text" 
             placeholder="Search students by name, reg no, SPR..." 
             value={searchQuery}
             onChange={handleSearch}
-            className="w-full pl-10 pr-4 py-3 bg-slate-800 border-none rounded-xl text-white placeholder-slate-400 focus:ring-2 focus:ring-blue-500"
+            className="w-full pl-12 pr-10 py-3.5 bg-white border border-slate-200 rounded-xl text-slate-800 placeholder-slate-400 focus:ring-2 focus:ring-indigo-500 outline-none shadow-sm"
           />
+          {searchQuery && (
+            <button 
+              onClick={() => { setSearchQuery(''); setFilteredStudents(students); }}
+              className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
         </div>
-      </div>
-
-      <div className="flex-1 p-6">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-lg font-bold text-slate-800">All Students ({filteredStudents.length})</h2>
-          <button 
-            onClick={() => openModal()}
-            className="flex items-center space-x-2 bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Add Student</span>
-          </button>
-        </div>
-
         {isLoading ? (
           <div className="flex justify-center py-20">
-            <RefreshCw className="w-8 h-8 animate-spin text-blue-500" />
+            <RefreshCw className="w-8 h-8 animate-spin text-slate-400" />
           </div>
         ) : filteredStudents.length === 0 ? (
           <div className="text-center py-10 text-slate-500 bg-white rounded-xl shadow-sm border border-slate-200">
             No students found.
           </div>
         ) : (
-          <div className="space-y-4">
+          <div className="space-y-3">
             {filteredStudents.map(student => (
-              <div key={student.id} className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex items-center justify-between">
-                <div className="flex items-center space-x-4">
-                  <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 font-bold text-lg">
+              <div key={student.id} className="bg-white rounded-xl shadow-sm border border-slate-100 p-2 flex flex-col md:flex-row md:items-center justify-between hover:shadow-md transition-shadow">
+                <div className="flex items-center space-x-4 pl-2 mb-2 md:mb-0">
+                  <div className="w-10 h-10 bg-blue-50 rounded-full flex items-center justify-center text-blue-600 font-bold text-lg shrink-0">
                     {student.fullName ? student.fullName[0].toUpperCase() : 'S'}
                   </div>
                   <div>
-                    <h3 className="font-bold text-slate-900">{student.fullName}</h3>
+                    <h3 className="font-bold text-slate-900 text-[15px]">{student.fullName}</h3>
                     <p className="text-xs text-slate-500">{student.department?.name || 'No Dept'} • {student.year || 'No Year'} • {student.section || 'No Sec'}</p>
-                    <p className="text-xs font-medium text-slate-600 mt-1">Reg: {student.registerNumber} | SPR: {student.sprNo}</p>
+                    <p className="text-[11px] font-medium text-slate-400 mt-1 uppercase tracking-wider">Reg: {student.registerNumber} | SPR: {student.sprNo}</p>
                   </div>
                 </div>
-                <div className="flex space-x-2">
-                  <button onClick={() => openModal(student)} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg">
+                <div className="flex space-x-1 pr-2 self-end md:self-center">
+                  <button onClick={() => openModal(student)} className="p-2.5 text-blue-600 hover:bg-blue-50 rounded-full transition-colors">
                     <Edit2 className="w-4 h-4" />
                   </button>
-                  <button onClick={() => handleDelete(student.id)} className="p-2 text-red-600 hover:bg-red-50 rounded-lg">
+                  <button onClick={() => handleDelete(student.id)} className="p-2.5 text-red-500 hover:bg-red-50 rounded-full transition-colors">
                     <Trash2 className="w-4 h-4" />
                   </button>
                 </div>
@@ -238,99 +231,115 @@ export default function StudentsTab({ onBack }: Props) {
         )}
       </div>
 
+      {/* FAB Add Button */}
+      <div className="fixed bottom-6 right-6 z-40">
+        <button 
+          onClick={() => openModal()}
+          className="w-14 h-14 bg-slate-900 text-white rounded-full flex items-center justify-center shadow-lg hover:bg-slate-800 hover:scale-105 transition-all"
+        >
+          <Plus className="w-6 h-6" />
+        </button>
+      </div>
+
       {/* Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
-            <div className="p-6 border-b border-slate-200 flex justify-between items-center bg-slate-50">
-              <h2 className="text-xl font-bold text-slate-800">
-                {editingStudent ? 'Edit Student' : 'Add New Student'}
+        <div className="fixed inset-0 z-50 bg-slate-900/50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl w-full max-w-md max-h-[90vh] overflow-y-auto flex flex-col shadow-2xl">
+            <div className="p-6 pb-4">
+              <h2 className="text-[17px] font-bold text-slate-900 mb-1">
+                {editingStudent ? `Edit Student: ${editingStudent.registerNumber || editingStudent.id}` : 'Add New Student'}
               </h2>
-              <button onClick={() => setIsModalOpen(false)} className="p-2 hover:bg-slate-200 rounded-full">
-                <X className="w-5 h-5 text-slate-500" />
-              </button>
             </div>
             
-            <form onSubmit={handleSave} className="flex-1 overflow-y-auto p-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <label className="text-sm font-medium text-slate-700">Full Name *</label>
-                  <input required type="text" value={formData.fullName} onChange={e => setFormData({...formData, fullName: e.target.value})} className="w-full p-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
+            <form onSubmit={handleSave} className="px-6 pb-6 space-y-4">
+              <div className="space-y-4">
+                <div>
+                  <label className="text-xs font-semibold text-slate-600 mb-1 block">Full Name *</label>
+                  <input required type="text" value={formData.fullName} onChange={e => setFormData({...formData, fullName: e.target.value})} className="w-full px-3 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-900 outline-none text-sm" />
                 </div>
-                <div className="space-y-1">
-                  <label className="text-sm font-medium text-slate-700">Username *</label>
-                  <input required type="text" value={formData.username} onChange={e => setFormData({...formData, username: e.target.value})} className="w-full p-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
+                <div>
+                  <label className="text-xs font-semibold text-slate-600 mb-1 block">Email *</label>
+                  <input required type="email" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} className="w-full px-3 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-900 outline-none text-sm" />
                 </div>
-                <div className="space-y-1">
-                  <label className="text-sm font-medium text-slate-700">Password {editingStudent ? '(Leave blank to keep)' : '*'}</label>
-                  <input required={!editingStudent} type="text" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} className="w-full p-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
+                <div>
+                  <label className="text-xs font-semibold text-slate-600 mb-1 block">Phone</label>
+                  <input type="text" value={formData.mobileNumber} onChange={e => setFormData({...formData, mobileNumber: e.target.value})} maxLength={10} className="w-full px-3 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-900 outline-none text-sm" />
                 </div>
-                <div className="space-y-1">
-                  <label className="text-sm font-medium text-slate-700">Email</label>
-                  <input type="email" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} className="w-full p-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
+                <div>
+                  <label className="text-xs font-semibold text-slate-600 mb-1 block">SPR No</label>
+                  <input type="text" value={formData.sprNo} onChange={e => setFormData({...formData, sprNo: e.target.value})} className="w-full px-3 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-900 outline-none text-sm" />
                 </div>
-                <div className="space-y-1">
-                  <label className="text-sm font-medium text-slate-700">Register Number *</label>
-                  <input required type="text" value={formData.registerNumber} onChange={e => setFormData({...formData, registerNumber: e.target.value})} className="w-full p-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
+                <div>
+                  <label className="text-xs font-semibold text-slate-600 mb-1 block">Register Number *</label>
+                  <input required type="text" value={formData.registerNumber} onChange={e => setFormData({...formData, registerNumber: e.target.value})} className="w-full px-3 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-900 outline-none text-sm" />
                 </div>
-                <div className="space-y-1">
-                  <label className="text-sm font-medium text-slate-700">SPR Number *</label>
-                  <input required type="text" value={formData.sprNo} onChange={e => setFormData({...formData, sprNo: e.target.value})} className="w-full p-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
+                {!editingStudent && (
+                  <div>
+                    <label className="text-xs font-semibold text-slate-600 mb-1 block">Username *</label>
+                    <input required type="text" value={formData.username} onChange={e => setFormData({...formData, username: e.target.value})} className="w-full px-3 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-900 outline-none text-sm" />
+                  </div>
+                )}
+                <div>
+                  <label className="text-xs font-semibold text-slate-600 mb-1 block">Password {editingStudent ? '(Leave blank to keep current)' : '*'}</label>
+                  <input required={!editingStudent} type="password" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} className="w-full px-3 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-900 outline-none text-sm" />
                 </div>
-                <div className="space-y-1">
-                  <label className="text-sm font-medium text-slate-700">Mobile Number</label>
-                  <input type="text" value={formData.mobileNumber} onChange={e => setFormData({...formData, mobileNumber: e.target.value})} className="w-full p-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
-                </div>
-                <div className="space-y-1">
-                  <label className="text-sm font-medium text-slate-700">Date of Birth</label>
-                  <input type="date" value={formData.dob ? formData.dob.split('T')[0] : ''} onChange={e => setFormData({...formData, dob: e.target.value})} className="w-full p-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
+                <div>
+                  <label className="text-xs font-semibold text-slate-600 mb-1 block">Date of Birth</label>
+                  <input type="date" value={formData.dob ? formData.dob.split('T')[0] : ''} onChange={e => setFormData({...formData, dob: e.target.value})} className="w-full px-3 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-900 outline-none text-sm" />
                 </div>
                 
-                {/* Selects */}
-                <div className="space-y-1">
-                  <label className="text-sm font-medium text-slate-700">Department</label>
-                  <select value={formData.departmentId} onChange={e => setFormData({...formData, departmentId: e.target.value})} className="w-full p-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white">
-                    {lookups.departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+                <div>
+                  <label className="text-xs font-semibold text-slate-600 mb-1 block">Department *</label>
+                  <select required value={formData.departmentId} onChange={e => setFormData({...formData, departmentId: e.target.value})} className="w-full px-3 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-900 outline-none bg-white text-sm">
+                    <option value="">-- Select --</option>
+                    {lookups.departments.map(d => <option key={d.id} value={d.id}>{d.code || d.name}</option>)}
                   </select>
                 </div>
-                <div className="space-y-1">
-                  <label className="text-sm font-medium text-slate-700">Year</label>
-                  <select value={formData.year} onChange={e => setFormData({...formData, year: e.target.value})} className="w-full p-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white">
-                    {lookups.years.map(y => <option key={y} value={y}>{y}</option>)}
-                  </select>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs font-semibold text-slate-600 mb-1 block">Academic Year *</label>
+                    <select value={formData.academicYear} onChange={e => setFormData({...formData, academicYear: e.target.value})} className="w-full px-3 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-900 outline-none bg-white text-sm">
+                      {lookups.academicYears.map(ay => <option key={ay} value={ay}>{ay}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-xs font-semibold text-slate-600 mb-1 block">Year *</label>
+                    <select value={formData.year} onChange={e => setFormData({...formData, year: e.target.value})} className="w-full px-3 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-900 outline-none bg-white text-sm">
+                      {lookups.years.map(y => <option key={y} value={y}>{y}</option>)}
+                    </select>
+                  </div>
                 </div>
-                <div className="space-y-1">
-                  <label className="text-sm font-medium text-slate-700">Semester</label>
-                  <select value={formData.semester} onChange={e => setFormData({...formData, semester: e.target.value})} className="w-full p-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white">
-                    {lookups.semesters.map(s => <option key={s} value={s}>{s}</option>)}
-                  </select>
+                
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs font-semibold text-slate-600 mb-1 block">Semester *</label>
+                    <select value={formData.semester} onChange={e => setFormData({...formData, semester: e.target.value})} className="w-full px-3 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-900 outline-none bg-white text-sm">
+                      {lookups.semesters.map(s => <option key={s} value={s}>{s}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-xs font-semibold text-slate-600 mb-1 block">Gender *</label>
+                    <select value={formData.gender} onChange={e => setFormData({...formData, gender: e.target.value})} className="w-full px-3 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-900 outline-none bg-white text-sm">
+                      {lookups.genders.map(g => <option key={g} value={g}>{g}</option>)}
+                    </select>
+                  </div>
                 </div>
-                <div className="space-y-1">
-                  <label className="text-sm font-medium text-slate-700">Section</label>
-                  <select value={formData.section} onChange={e => setFormData({...formData, section: e.target.value})} className="w-full p-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white">
-                    {lookups.sections.map(s => <option key={s} value={s}>{s}</option>)}
-                  </select>
-                </div>
-                <div className="space-y-1">
-                  <label className="text-sm font-medium text-slate-700">Gender</label>
-                  <select value={formData.gender} onChange={e => setFormData({...formData, gender: e.target.value})} className="w-full p-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white">
-                    {lookups.genders.map(g => <option key={g} value={g}>{g}</option>)}
-                  </select>
-                </div>
-                <div className="space-y-1">
-                  <label className="text-sm font-medium text-slate-700">Academic Year</label>
-                  <select value={formData.academicYear} onChange={e => setFormData({...formData, academicYear: e.target.value})} className="w-full p-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white">
-                    {lookups.academicYears.map(ay => <option key={ay} value={ay}>{ay}</option>)}
+                
+                <div>
+                  <label className="text-xs font-semibold text-slate-600 mb-1 block">Section (Optional)</label>
+                  <select value={formData.section} onChange={e => setFormData({...formData, section: e.target.value})} className="w-full px-3 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-900 outline-none bg-white text-sm">
+                    <option value="">No Section Selected</option>
+                    {lookups.sections.map(sec => <option key={sec} value={sec}>{sec}</option>)}
                   </select>
                 </div>
               </div>
               
-              <div className="mt-8 flex justify-end space-x-3">
-                <button type="button" onClick={() => setIsModalOpen(false)} className="px-5 py-2.5 text-slate-600 font-medium hover:bg-slate-100 rounded-lg transition-colors">
+              <div className="flex justify-end space-x-3 pt-4">
+                <button type="button" onClick={() => setIsModalOpen(false)} className="px-5 py-2 text-slate-500 font-semibold hover:bg-slate-100 rounded-lg transition-colors">
                   Cancel
                 </button>
-                <button type="submit" className="px-5 py-2.5 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors shadow-sm">
-                  {editingStudent ? 'Update Student' : 'Save Student'}
+                <button type="submit" className="px-6 py-2 bg-slate-900 text-white font-semibold rounded-lg hover:bg-slate-800 transition-colors">
+                  {editingStudent ? 'Save' : 'Create'}
                 </button>
               </div>
             </form>

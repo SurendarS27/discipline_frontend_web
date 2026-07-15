@@ -101,12 +101,12 @@ export default function OverviewTab({ onPushView }: Props) {
 
             <div>
               <h3 className="text-lg font-bold text-slate-900 mb-4">Quick System Overview</h3>
-              <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 space-y-4">
-                <OverviewRow icon={Activity} title="Database Status" value="Online & Healthy" statusColor="text-green-600" statusBg="bg-green-100" />
+              <div className="bg-white rounded-2xl shadow-md p-4 space-y-4">
+                <OverviewRow icon={Activity} title="Database Status" value="Online & Healthy" statusColor="text-green-600" />
                 <div className="h-px bg-slate-100"></div>
-                <OverviewRow icon={Shield} title="Security Level" value="JWT Enabled" statusColor="text-blue-600" statusBg="bg-blue-100" />
+                <OverviewRow icon={Shield} title="Security Level" value="JWT Enabled" statusColor="text-blue-600" />
                 <div className="h-px bg-slate-100"></div>
-                <OverviewRow icon={Key} title="Self-Registration" value="Disabled (Admin Only)" statusColor="text-amber-600" statusBg="bg-amber-100" />
+                <OverviewRow icon={Key} title="Self-Registration" value="Disabled (Admin Only)" statusColor="text-orange-500" />
               </div>
             </div>
           </div>
@@ -120,30 +120,30 @@ function StatCard({ title, count, icon: Icon, color, bgColor, onClick }: any) {
   return (
     <div 
       onClick={onClick}
-      className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 active:scale-95 transition-transform"
+      className={`bg-white rounded-2xl shadow-md p-4 transition-transform ${onClick ? 'cursor-pointer active:scale-95' : ''}`}
     >
       <div className="flex justify-between items-start mb-4">
-        <div className={`p-2 rounded-lg ${bgColor}`}>
+        <div className={`p-2 rounded-xl ${bgColor}`}>
           <Icon className={`w-6 h-6 ${color}`} />
         </div>
       </div>
       <div>
         <h4 className="text-2xl font-bold text-slate-900">{count}</h4>
-        <p className="text-xs font-medium text-slate-500">{title}</p>
+        <p className="text-sm font-medium text-slate-600 mt-1">{title}</p>
       </div>
     </div>
   );
 }
 
-function OverviewRow({ icon: Icon, title, value, statusColor, statusBg }: any) {
+function OverviewRow({ icon: Icon, title, value, statusColor }: any) {
   return (
-    <div className="flex items-center justify-between">
+    <div className="flex items-center justify-between py-2">
       <div className="flex items-center space-x-4">
-        <Icon className="w-5 h-5 text-slate-400" />
-        <span className="font-semibold text-slate-900 text-sm">{title}</span>
+        <Icon className="w-5 h-5 text-slate-500" />
+        <span className="font-semibold text-slate-900 text-[15px]">{title}</span>
       </div>
-      <div className={`px-3 py-1 rounded-full ${statusBg}`}>
-        <span className={`text-xs font-bold ${statusColor}`}>{value}</span>
+      <div>
+        <span className={`text-[15px] font-bold ${statusColor}`}>{value}</span>
       </div>
     </div>
   );
