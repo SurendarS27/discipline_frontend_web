@@ -1,6 +1,6 @@
 import React from 'react';
 import { Navigate } from 'react-router-dom';
-import { useAuth } from '../store/authContext';
+import { useAuthStore } from '../store/authStore';
 
 interface Props {
   children: React.ReactNode;
@@ -8,13 +8,13 @@ interface Props {
 }
 
 export default function ProtectedRoute({ children, allowedRoles }: Props) {
-  const { token, role } = useAuth();
+  const { isAuthenticated, user } = useAuthStore();
 
-  if (!token || !role) {
+  if (!isAuthenticated || !user) {
     return <Navigate to="/login" replace />;
   }
 
-  if (allowedRoles && !allowedRoles.includes(role)) {
+  if (allowedRoles && !allowedRoles.includes(user.role)) {
     return <Navigate to="/login" replace />; // or an unauthorized page
   }
 

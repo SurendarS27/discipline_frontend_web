@@ -10,7 +10,7 @@ const apiClient = axios.create({
 
 // Add a request interceptor to attach token
 apiClient.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token');
+  const token = localStorage.getItem('token') || localStorage.getItem('auth_token');
   const isAuthRoute = config.url?.includes('/api/v1/auth/login') || config.url?.includes('/api/v1/auth/student-login');
   if (token && !isAuthRoute) {
     config.headers.Authorization = `Bearer ${token}`;

@@ -155,7 +155,7 @@ export default function DashboardTab() {
             <span className="text-indigo-100 font-medium">Discipline Score</span>
             <Shield className="w-6 h-6 text-white/90" />
           </div>
-          <div className="text-4xl font-bold mb-5">{profile.score} Points</div>
+          <div className="text-4xl font-bold mb-5">{totalXp} Points</div>
           
           <div className="h-px bg-white/20 mb-4" />
           
@@ -199,7 +199,7 @@ export default function DashboardTab() {
             ))}
           </div>
           <div className="flex-1 font-bold text-sm text-slate-800">
-            Stage {profile.currentStage} — {profile.currentStage === 1 ? 'Roots' : profile.currentStage === 2 ? 'Branches' : 'Fruits'} | {totalXp} / {profile.currentStage === 1 ? 500 : 1200} XP
+            Stage {Math.max(1, profile.currentStage)} — {Math.max(1, profile.currentStage) === 1 ? 'Roots' : Math.max(1, profile.currentStage) === 2 ? 'Branches' : 'Fruits'} | {totalXp} / {Math.max(1, profile.currentStage) === 1 ? 500 : 1200} XP
           </div>
         </div>
 
@@ -220,7 +220,7 @@ export default function DashboardTab() {
             </div>
             <div>
               <div className="text-xs text-slate-500 font-medium mb-1">Active Stage</div>
-              <div className="text-lg font-bold text-slate-800">Stage {profile.currentStage}</div>
+              <div className="text-lg font-bold text-slate-800">Stage {Math.max(1, profile.currentStage)}</div>
             </div>
           </div>
         </div>

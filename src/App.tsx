@@ -11,13 +11,31 @@ import GroupActivityYearPage from './features/admin/activity/pages/GroupActivity
 import GroupActivityExecutionPage from './features/admin/activity/pages/GroupActivityExecutionPage';
 import ActivityExecutionPageV2 from './features/admin/activity/pages/ActivityExecutionPageV2';
 import StudentsDirectoryPage from './features/teacher/pages/StudentsDirectoryPage';
-
+import StudentListPage from './features/student/pages/StudentListPage';
+import StudentDetailsPage from './features/student/pages/StudentDetailsPage';
 function App() {
   return (
     <BrowserRouter>
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         
+        {/* Shared Routes */}
+        <Route 
+          path="/students" 
+          element={
+            <ProtectedRoute allowedRoles={['ADMIN', 'TEACHER']}>
+              <StudentListPage />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/students/:id" 
+          element={
+            <ProtectedRoute allowedRoles={['ADMIN', 'TEACHER']}>
+              <StudentDetailsPage />
+            </ProtectedRoute>
+          } 
+        />
         <Route 
           path="/admin/*" 
           element={

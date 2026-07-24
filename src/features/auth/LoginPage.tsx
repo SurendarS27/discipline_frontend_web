@@ -1,147 +1,150 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import { Lock, User, ShieldAlert } from 'lucide-react';
-import { useAuth } from '../../store/authContext';
-import apiClient from '../../services/apiClient';
+import { useAuthStore } from '../../store/authStore';
+import { authService, type LoginCredentials } from './services/auth.service';
+
+const loginSchema = z.object({
+  role: z.enum(['Student', 'Teacher', 'Admin']),
+  username: z.string().min(1, 'Username / ID is required'),
+  password: z.string().min(1, 'Password is required'),
+});
+
+type LoginFormValues = z.infer<typeof loginSchema>;
 
 export default function LoginPage() {
   const navigate = useNavigate();
-  const { login } = useAuth();
-  
-  const [role, setRole] = useState('Student');
-  const [identity, setIdentity] = useState('');
-  const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
+  const login = useAuthStore((state) => state.login);
   const [error, setError] = useState<string | null>(null);
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
-    if (!identity.trim() || !password) {
-      setError('Please fill in all fields');
-      return;
-    }
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm<LoginFormValues>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: {
+      role: 'Student',
+      username: '',
+      password: '',
+    },
+  });
 
-    setLoading(true);
+  const onSubmit = async (data: LoginFormValues) => {
+    setError(null);
     try {
-      if (role === 'Admin' || role === 'Teacher') {
-        const res = await apiClient.post('/api/v1/auth/login', {
-          username: identity,
-          password
-        });
-        
-        if (res.data.success) {
-          const data = res.data.data;
-          const token = data.token;
-          const roles: string[] = data.roles || [];
-          const userType = data.userType || '';
-          
-          if (roles.includes('ROLE_ADMIN')) {
-            login(token, 'ADMIN');
-            navigate('/admin');
-          } else if (userType === 'TEACHER' || roles.includes('ROLE_TEACHER') || roles.includes('ROLE_DISCIPLINE_COMMITTEE')) {
-            login(token, 'TEACHER');
-            navigate('/teacher');
-          } else {
-            setError('Unauthorized role combination');
-          }
+      const response = await authService.login(data);
+      const token = response.token;
+      
+      // Determine the user's role from the backend response
+      let finalRole = 'STUDENT';
+      const userType = (response as any).userType || '';
+      const roles: string[] = (response as any).roles || [];
+      const isCaptain = (response as any).isCaptain === true || (response as any).captain === true;
+
+      if (data.role === 'Admin' || data.role === 'Teacher') {
+        if (roles.includes('ROLE_ADMIN')) {
+          finalRole = 'ADMIN';
+        } else if (userType === 'TEACHER' || roles.includes('ROLE_TEACHER') || roles.includes('ROLE_DISCIPLINE_COMMITTEE')) {
+          finalRole = 'TEACHER';
         } else {
-          setError('Invalid credentials');
+          setError('Unauthorized role combination');
+          return;
         }
       } else {
-        const res = await apiClient.post('/api/v1/auth/student-login', {
-          identity,
-          password
-        });
-        
-        if (res.data.success) {
-          const data = res.data.data;
-          const token = data.token;
-          const userType = data.userType || '';
-          const isCaptain = data.isCaptain === true || data.captain === true;
-          
-          login(token, isCaptain || userType === 'CAPTAIN' ? 'CAPTAIN' : 'STUDENT');
-          navigate('/student'); // Both Captains and Students go here
-        } else {
-          setError('Invalid credentials');
-        }
+        finalRole = isCaptain || userType === 'CAPTAIN' ? 'CAPTAIN' : 'STUDENT';
       }
+
+      // Call Zustand store login
+      const user = {
+        id: (response as any).id || (response as any).studentId || 'unknown',
+        username: data.username,
+        role: finalRole,
+        name: (response as any).name || (response as any).firstName || data.username,
+      };
+      
+      login(user, token);
+      
+      // Navigate to the correct dashboard
+      navigate(`/${finalRole.toLowerCase()}`);
+      
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Connection failed. Ensure backend is running.');
-    } finally {
-      setLoading(false);
+      setError(err.message || 'Connection failed. Ensure backend is running.');
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-800 to-slate-900 px-6">
-      <div className="bg-white/95 rounded-3xl p-8 max-w-md w-full shadow-2xl">
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-6">
+      <div className="bg-white rounded-xl p-8 max-w-md w-full shadow-lg border border-gray-100">
         <div className="flex flex-col items-center mb-8">
-          <div className="bg-indigo-100 p-4 rounded-full mb-4">
-            <Lock className="w-12 h-12 text-indigo-600" />
+          <div className="bg-indigo-50 p-4 rounded-full mb-4">
+            <Lock className="w-10 h-10 text-indigo-600" />
           </div>
-          <h1 className="text-2xl font-bold text-slate-800 tracking-wide">SPDMS Login</h1>
-          <p className="text-slate-500 text-sm mt-1">Enter your credentials to access your portal</p>
+          <h1 className="text-2xl font-bold text-gray-900 tracking-tight">SPDMS Login</h1>
+          <p className="text-gray-500 text-sm mt-1">Enter your credentials to access your portal</p>
         </div>
 
         {error && (
-          <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-lg text-sm flex items-center gap-2">
+          <div className="mb-6 p-3 bg-red-50 text-red-600 rounded-lg text-sm flex items-center gap-2 border border-red-100">
             <ShieldAlert className="w-4 h-4 shrink-0" />
             <span>{error}</span>
           </div>
         )}
 
-        <form onSubmit={handleLogin} className="space-y-5">
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Select Role</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Select Role</label>
             <div className="relative">
               <select
-                value={role}
-                onChange={(e) => setRole(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-600 focus:border-transparent outline-none appearance-none"
+                {...register('role')}
+                className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-600 focus:border-indigo-600 outline-none appearance-none text-gray-900"
               >
                 <option value="Student">Student</option>
                 <option value="Teacher">Teacher</option>
                 <option value="Admin">Admin</option>
               </select>
-              <User className="w-5 h-5 text-slate-400 absolute left-3 top-3.5" />
+              <User className="w-5 h-5 text-gray-400 absolute left-3 top-3" />
             </div>
+            {errors.role && <p className="mt-1 text-sm text-red-600">{errors.role.message}</p>}
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Username / ID / Email</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Username / ID / Email</label>
             <div className="relative">
               <input
                 type="text"
-                value={identity}
-                onChange={(e) => setIdentity(e.target.value)}
+                {...register('username')}
                 placeholder="Enter your Username, ID or Email"
-                className="w-full pl-10 pr-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-600 focus:border-transparent outline-none"
+                className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-600 focus:border-indigo-600 outline-none text-gray-900"
               />
-              <User className="w-5 h-5 text-slate-400 absolute left-3 top-3.5" />
+              <User className="w-5 h-5 text-gray-400 absolute left-3 top-3" />
             </div>
+            {errors.username && <p className="mt-1 text-sm text-red-600">{errors.username.message}</p>}
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Password</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
             <div className="relative">
               <input
                 type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                {...register('password')}
                 placeholder="••••••••"
-                className="w-full pl-10 pr-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-600 focus:border-transparent outline-none"
+                className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-600 focus:border-indigo-600 outline-none text-gray-900"
               />
-              <Lock className="w-5 h-5 text-slate-400 absolute left-3 top-3.5" />
+              <Lock className="w-5 h-5 text-gray-400 absolute left-3 top-3" />
             </div>
+            {errors.password && <p className="mt-1 text-sm text-red-600">{errors.password.message}</p>}
           </div>
 
           <button
             type="submit"
-            disabled={loading}
-            className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3.5 rounded-xl transition-colors disabled:opacity-70 disabled:cursor-not-allowed mt-4"
+            disabled={isSubmitting}
+            className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2.5 rounded-lg transition-colors disabled:opacity-70 disabled:cursor-not-allowed mt-6 shadow-sm"
           >
-            {loading ? 'Signing In...' : 'Sign In'}
+            {isSubmitting ? 'Signing In...' : 'Sign In'}
           </button>
         </form>
       </div>

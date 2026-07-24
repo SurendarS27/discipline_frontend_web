@@ -1,3 +1,4 @@
 export const ApiConfig = {
-  baseUrl: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080',
+  // Use a relative URL in development so Vite can proxy requests and avoid CORS issues.
+  baseUrl: import.meta.env.VITE_API_BASE_URL || '',
 };

@@ -8,7 +8,8 @@ import RemovalRequestsTab from './tabs/RemovalRequestsTab';
 import TeacherGroupManagementTab from './tabs/TeacherGroupManagementTab';
 import HodPerformanceTab from './tabs/HodPerformanceTab';
 import ProfileTab from './tabs/ProfileTab';
-import { Activity, Trophy, AlertCircle, Users, BarChart3, User, CalendarDays } from 'lucide-react';
+import AttendanceTab from './tabs/AttendanceTab';
+import { Activity, Trophy, AlertCircle, Users, BarChart3, User, CalendarDays, CalendarCheck } from 'lucide-react';
 
 export default function TeacherDashboard() {
   const { subRoles, setSubRoles } = useAuth();
@@ -53,6 +54,7 @@ export default function TeacherDashboard() {
 
   availableTabs.push(
     { name: 'Leaderboard', icon: Trophy, component: <LeaderboardTab /> },
+    { name: 'Attendance', icon: CalendarCheck, component: <AttendanceTab /> },
     { name: 'Requests', icon: AlertCircle, component: <RemovalRequestsTab /> },
     { name: 'Groups', icon: Users, component: <TeacherGroupManagementTab /> }
   );
