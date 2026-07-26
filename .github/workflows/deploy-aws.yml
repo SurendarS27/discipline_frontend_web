@@ -13,20 +13,26 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
+          
       - name: Install dependencies
         run: npm ci
+        
       - name: Build React application
         run: npm run build
+        
       - name: Configure AWS Credentials with OIDC
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
           aws-region: ${{ vars.AWS_REGION }}
-      - name: Upload React build to S3
+      - name: Push React build to S3 bucket
+      
         run: |
-          aws s3 sync dist/ s3://${{ vars.S3_BUCKET_NAME }}/ --delete
+          TIMESTAMP=$(date +'%Y-%m-%d_%H-%M-%S')
+          aws s3 cp dist/ "s3://${{ vars.S3_BUCKET_NAME }}/frontend/build_${TIMESTAMP}/" --recursive
