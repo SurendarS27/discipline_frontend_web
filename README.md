@@ -1,20 +1,20 @@
 # Revup-Frontend
 
-React + TypeScript + Vite application for Revup Frontend.
+React + TypeScript + Vite application for RevUp.
 
-## Getting Started
+## Development
 
-### Install Dependencies
 ```bash
+# Install dependencies
 npm install
-```
 
-### Development Server
-```bash
+# Run dev server
 npm run dev
-```
 
-### Build for Production
-```bash
+# Build for production
 npm run build
 ```
+
+## Features & CI/CD
+- AWS Deployment Workflow: `.github/workflows/deploy-aws.yml`
+
