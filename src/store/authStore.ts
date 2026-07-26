@@ -16,7 +16,7 @@ interface AuthState {
 }
 
 // Load initial state from localStorage
-const storedToken = localStorage.getItem('auth_token');
+const storedToken = localStorage.getItem('auth_token') || localStorage.getItem('token');
 const storedUser = localStorage.getItem('user');
 
 let initialUser = null;
@@ -35,14 +35,18 @@ export const useAuthStore = create<AuthState>((set) => ({
   
   login: (user, token) => {
     localStorage.setItem('auth_token', token);
+    localStorage.setItem('token', token);
     localStorage.setItem('user', JSON.stringify(user));
+    localStorage.setItem('userRole', user.role);
     set({ user, token, isAuthenticated: true });
   },
   
   logout: () => {
     localStorage.removeItem('auth_token');
+    localStorage.removeItem('token');
     localStorage.removeItem('user');
+    localStorage.removeItem('userRole');
     set({ user: null, token: null, isAuthenticated: false });
-    // In a real app we would want to route the user, but we'll do this in the UI layer
   }
 }));
+

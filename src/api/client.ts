@@ -1,7 +1,7 @@
 import axios from 'axios';
+import { ApiConfig } from '../config/apiConfig';
 
-// Get base URL from environment variables, fallback to localhost for development
-const baseURL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
+const baseURL = import.meta.env.VITE_API_BASE_URL || ApiConfig.baseUrl || '';
 
 export const apiClient = axios.create({
   baseURL,
@@ -14,7 +14,8 @@ export const apiClient = axios.create({
 apiClient.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('auth_token') || localStorage.getItem('token');
-    if (token && config.headers) {
+    const isAuthRoute = config.url?.includes('/api/v1/auth/login') || config.url?.includes('/api/v1/auth/student-login');
+    if (token && !isAuthRoute && config.headers) {
       config.headers.Authorization = `Bearer ${token}`;
     }
     return config;
@@ -31,10 +32,11 @@ apiClient.interceptors.response.use(
   },
   (error) => {
     if (error.response && error.response.status === 401) {
-      // Clear token and redirect to login
+      // Clear tokens and user info
       localStorage.removeItem('auth_token');
+      localStorage.removeItem('token');
       localStorage.removeItem('user');
-      // Use window.location instead of router to avoid circular dependencies
+      localStorage.removeItem('userRole');
       if (window.location.pathname !== '/login') {
         window.location.href = '/login';
       }
@@ -42,3 +44,6 @@ apiClient.interceptors.response.use(
     return Promise.reject(error);
   }
 );
+
+export default apiClient;
+
