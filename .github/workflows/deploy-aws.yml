@@ -31,8 +31,8 @@ jobs:
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
           aws-region: ${{ vars.AWS_REGION }}
-      - name: Push React build to S3 bucket
       
+      
+      - name: Deploy frontend to S3
         run: |
-          TIMESTAMP=$(date +'%Y-%m-%d_%H-%M-%S')
-          aws s3 cp dist/ "s3://${{ vars.S3_BUCKET_NAME }}/frontend/build_${TIMESTAMP}/" --recursive
+         aws s3 cp dist/ "s3://${{ vars.S3_BUCKET_NAME }}/frontend/dist/" --recursive
