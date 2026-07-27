@@ -1,38 +1,40 @@
-name: Build and Push React to S3
+name: Build and Deploy React to S3
+
 on:
   push:
     branches:
       - main
-# Required for OIDC authentication
+
 permissions:
   id-token: write
   contents: read
+
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout repository
+      - name: Checkout Repository
         uses: actions/checkout@v4
-        
-      - name: Set up Node.js
+
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          cache: 'npm'
-          
-      - name: Install dependencies
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install Dependencies
         run: npm ci
-        
-      - name: Build React application
+
+      - name: Build React Application
         run: npm run build
-        
-      - name: Configure AWS Credentials with OIDC
+
+      - name: Configure AWS Credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
           aws-region: ${{ vars.AWS_REGION }}
-      
-      
-      - name: Deploy frontend to S3
+
+      - name: Deploy Build to S3
         run: |
-         aws s3 cp dist/ "s3://${{ vars.S3_BUCKET_NAME }}/frontend/dist/" --recursive
+          aws s3 sync dist/ s3://${{ vars.S3_BUCKET_NAME }}/frontend/ --delete
