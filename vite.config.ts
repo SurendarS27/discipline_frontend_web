@@ -7,11 +7,11 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': {
-        target: 'http://www.pragatix.in',
+        target: 'http://www.pragatix.in/',
         changeOrigin: true,
         secure: false,
         headers: {
-          Origin: 'http://www.pragaix.in',
+          Origin: 'https://pragatix.in/' ,
         },
       },
     },
