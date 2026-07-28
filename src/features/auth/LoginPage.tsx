@@ -5,7 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Lock, User, ShieldAlert } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
-import { authService, type LoginCredentials } from './services/auth.service';
+import { authService } from './services/auth.service';
 
 const loginSchema = z.object({
   role: z.enum(['Student', 'Teacher', 'Admin']),
