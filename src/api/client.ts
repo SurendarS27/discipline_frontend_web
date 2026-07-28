@@ -10,11 +10,11 @@ export const apiClient = axios.create({
   },
 });
 
-// Request interceptor to attach JWT token
+// Request interceptor to attach JWT token (reads fresh every time)
 apiClient.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('auth_token') || localStorage.getItem('token');
-    const isAuthRoute = config.url?.includes('/api/v1/auth/login') || config.url?.includes('/api/v1/auth/student-login');
+    const token = localStorage.getItem('spdms_token') || localStorage.getItem('auth_token') || localStorage.getItem('token');
+    const isAuthRoute = config.url?.includes('/api/v1/auth/login') || config.url?.includes('/api/v1/auth/student-login') || config.url?.includes('/api/v1/auth/parent-login');
     if (token && !isAuthRoute && config.headers) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -33,10 +33,13 @@ apiClient.interceptors.response.use(
   (error) => {
     if (error.response && error.response.status === 401) {
       // Clear tokens and user info
+      localStorage.removeItem('spdms_token');
+      localStorage.removeItem('spdms_user');
       localStorage.removeItem('auth_token');
       localStorage.removeItem('token');
       localStorage.removeItem('user');
       localStorage.removeItem('userRole');
+      delete apiClient.defaults.headers.common['Authorization'];
       if (window.location.pathname !== '/login') {
         window.location.href = '/login';
       }
