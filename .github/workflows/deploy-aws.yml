@@ -1,10 +1,14 @@
-name: Deploy to AWS (S3 & CloudFront)
+name: Build and Push to S3
 
 on:
   push:
     branches:
       - main
-      - updated1
+
+# Required for OIDC authentication
+permissions:
+  id-token: write 
+  contents: read  
 
 jobs:
   deploy:
@@ -12,35 +16,25 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
+      - name: Checkout Repository
         uses: actions/checkout@v4
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
-          cache: 'npm'
+          java-version: '21'
+          distribution: 'temurin'
+          cache: maven
 
-      - name: Install dependencies
-        run: npm ci
+      - name: Build with Maven
+        run: mvn clean package -DskipTests
 
-      - name: Build production bundle
-        env:
-          VITE_API_BASE_URL: ${{ secrets.VITE_API_BASE_URL }}
-        run: npm run build
-
-      - name: Configure AWS Credentials
+      - name: Configure AWS Credentials with OIDC
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_REGION || 'us-east-1' }}
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+          aws-region: ${{ secrets.AWS_REGION }}
 
-      - name: Sync build output to S3 Bucket
+      - name: Push code to S3 bucket
         run: |
-          aws s3 sync dist/ s3://${{ secrets.AWS_S3_BUCKET_NAME }} --delete
-
-      - name: Invalidate CloudFront Cache
-        if: ${{ secrets.AWS_CLOUDFRONT_DISTRIBUTION_ID != '' }}
-        run: |
-          aws cloudfront create-invalidation --distribution-id ${{ secrets.AWS_CLOUDFRONT_DISTRIBUTION_ID }} --paths "/*"
+          aws s3 cp target/*.jar s3://${{ secrets.S3_BUCKET_NAME }}/backend/
