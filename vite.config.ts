@@ -11,8 +11,7 @@ export default defineConfig({
         changeOrigin: true,
         secure: false,
         headers: {
-          Origin: 'https://pragatix.in/' ,
-        },
+          Origin: 'https://pragatix.in/',
         },
       },
     },
