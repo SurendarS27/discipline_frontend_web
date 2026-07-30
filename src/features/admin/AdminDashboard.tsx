@@ -7,13 +7,16 @@ import AdminProfileTab from './tabs/AdminProfileTab';
 import StudentsTab from './tabs/StudentsTab';
 import TeachersTab from './tabs/TeachersTab';
 import DepartmentsTab from './tabs/DepartmentsTab';
+import AdminAttendanceTab from './tabs/AdminAttendanceTab';
+import AdminBadgeRequestsTab from './tabs/AdminBadgeRequestsTab';
+import GroupActivityExecutionPage from './activity/pages/GroupActivityExecutionPage';
 import CreateStagePage from './pages/CreateStagePage';
 import EditStagePage from './pages/EditStagePage';
 import StageDetailsPage from './pages/StageDetailsPage';
 import ActivityListPage from './activity/pages/ActivityListPage';
 import CreateActivityPage from './activity/pages/CreateActivityPage';
 import EditActivityPage from './activity/pages/EditActivityPage';
-import { LayoutDashboard, Activity, Users, AlertCircle, User } from 'lucide-react';
+import { LayoutDashboard, Activity, Users, AlertCircle, User, CalendarCheck, Award } from 'lucide-react';
 
 export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState(0);
@@ -36,20 +39,36 @@ export default function AdminDashboard() {
     }
   };
 
-  const tabs = [
-    { name: 'Overview', icon: LayoutDashboard, component: <OverviewTab onPushView={pushView} /> },
-    { name: 'Activity', icon: Activity, component: <ActivityTab onPushView={pushView} /> },
-    { name: 'Groups', icon: Users, component: <TeacherGroupManagementTab /> },
-    { name: 'Requests', icon: AlertCircle, component: <RemovalRequestsTab /> },
-    { name: 'Profile', icon: User, component: <AdminProfileTab /> }
+  const tabs: { name: string; icon: any; Component: React.ComponentType<any> }[] = [
+    { name: 'Overview', icon: LayoutDashboard, Component: OverviewTab },
+    { name: 'Attendance', icon: CalendarCheck, Component: AdminAttendanceTab },
+    { name: 'Badges', icon: Award, Component: AdminBadgeRequestsTab },
+    { name: 'Activity', icon: Activity, Component: ActivityTab },
+    { name: 'Groups', icon: Users, Component: TeacherGroupManagementTab },
+    { name: 'Requests', icon: AlertCircle, Component: RemovalRequestsTab },
+    { name: 'Profile', icon: User, Component: AdminProfileTab }
   ];
+
+  const renderActiveTabComponent = () => {
+    const ActiveComp = tabs[activeTab].Component;
+    if (activeTab === 0 || activeTab === 3) {
+      return <ActiveComp onPushView={pushView} />;
+    }
+    return <ActiveComp />;
+  };
 
   const renderCurrentView = () => {
     if (viewStack.length === 0) {
-      return tabs[activeTab].component;
+      return renderActiveTabComponent();
     }
     const currentView = viewStack[viewStack.length - 1];
     switch (currentView.name) {
+      case 'attendance':
+        return <AdminAttendanceTab onBack={popView} />;
+      case 'badge_requests':
+        return <AdminBadgeRequestsTab onBack={popView} />;
+      case 'group_activity_execution':
+        return <GroupActivityExecutionPage onBack={popView} activityId={currentView.props?.activityId} assignmentId={currentView.props?.assignmentId} />;
       case 'students':
         return <StudentsTab onBack={popView} />;
       case 'teachers':
@@ -69,7 +88,7 @@ export default function AdminDashboard() {
       case 'edit_activity':
         return <EditActivityPage onBack={popView} activity={currentView.props?.activity} />;
       default:
-        return tabs[activeTab].component;
+        return renderActiveTabComponent();
     }
   };
 

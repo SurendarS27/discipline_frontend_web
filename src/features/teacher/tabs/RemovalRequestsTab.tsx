@@ -23,26 +23,16 @@ export default function RemovalRequestsTab() {
     try {
       const response = await apiClient.get('/api/v1/badges/pending');
       if (response.data.success) {
-        setPendingBadgeClaims(response.data.data || []);
+        const rawClaims: any[] = response.data.data || [];
+        // Deduplicate claims by unique claim ID or key
+        const uniqueClaims = Array.from(
+          new Map(rawClaims.map((item: any) => [item.id ?? `${item.regNo || item.studentRegNo}_${item.badgeName || item.badge?.name}_${item.evidenceUrl}`, item])).values()
+        );
+        setPendingBadgeClaims(uniqueClaims);
       }
-    } catch {
-      // Fallback
-      setPendingBadgeClaims([
-        {
-          id: 101,
-          student: { fullName: "Sharugesh", studentId: "24CS036" },
-          badge: { name: "GPA Master", tier: "Achievement", rarity: "Uncommon" },
-          evidenceUrl: "https://drive.google.com/file/d/gpa_sem5_report/view",
-          status: "PENDING"
-        },
-        {
-          id: 102,
-          student: { fullName: "Alice Johnson", studentId: "24CS012" },
-          badge: { name: "Code Ninja", tier: "Achievement", rarity: "Uncommon" },
-          evidenceUrl: "https://github.com/alicej/code-ninja-streak-log",
-          status: "PENDING"
-        }
-      ]);
+    } catch (error) {
+      console.error("Failed to fetch pending badge claims:", error);
+      setPendingBadgeClaims([]);
     } finally {
       setIsBadgeLoading(false);
     }
@@ -70,17 +60,25 @@ export default function RemovalRequestsTab() {
         alert(`Badge '${badgeName}' successfully approved!`);
         setPendingBadgeClaims(prev => prev.filter(c => c.id !== claimId));
       } else {
-        throw new Error();
+        alert(response.data.message || 'Failed to approve badge.');
       }
-    } catch {
-      alert(`Approved badge '${badgeName}' (Simulation Mode)`);
-      setPendingBadgeClaims(prev => prev.filter(c => c.id !== claimId));
+    } catch (e: any) {
+      alert(`Error approving claim: ${e.response?.data?.message || e.message}`);
     }
   };
 
-  const rejectClaim = (claimId: number) => {
-    alert('Badge Claim Rejected');
-    setPendingBadgeClaims(prev => prev.filter(c => c.id !== claimId));
+  const rejectClaim = async (claimId: number, badgeName: string) => {
+    try {
+      const response = await apiClient.put(`/api/v1/badges/${claimId}/reject`);
+      if (response.data.success) {
+        alert(`Badge '${badgeName}' rejected.`);
+        setPendingBadgeClaims(prev => prev.filter(c => c.id !== claimId));
+      } else {
+        alert(response.data.message || 'Failed to reject claim.');
+      }
+    } catch (e: any) {
+      alert(`Error rejecting claim: ${e.response?.data?.message || e.message}`);
+    }
   };
 
   const handleRemovalRequest = async (id: number, approve: boolean) => {
@@ -118,53 +116,59 @@ export default function RemovalRequestsTab() {
 
     return (
       <div className="p-4 space-y-4">
-        {pendingBadgeClaims.map(claim => (
-          <div key={claim.id} className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-            <div className="p-4">
-              <div className="flex justify-between items-start mb-3">
-                <div>
-                  <h3 className="font-bold text-[16px] text-slate-800">{claim.student?.fullName || "Unknown Student"}</h3>
-                  <p className="text-xs text-slate-500 mt-0.5">Roll No: {claim.student?.studentId || ""}</p>
+        {pendingBadgeClaims.map(claim => {
+          const studentName = claim.studentName || claim.fullName || claim.student?.fullName || claim.student?.studentName || claim.username || "Unknown Student";
+          const rollNo = claim.regNo || claim.studentRegNo || claim.studentId || claim.student?.studentId || claim.student?.regNo || claim.sprNo || claim.rollNo || "";
+          const badgeName = claim.badgeName || claim.badge?.name || claim.activityName || "";
+          const tier = claim.tier || claim.badge?.tier || claim.category || claim.badgeTier || "BADGE CLAIM";
+
+          return (
+            <div key={claim.id} className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+              <div className="p-4">
+                <div className="flex justify-between items-start mb-3">
+                  <div>
+                    <h3 className="font-bold text-[16px] text-slate-800">{studentName}</h3>
+                    <p className="text-xs text-slate-500 mt-0.5">Roll No: {rollNo}</p>
+                  </div>
+                  <div className="bg-teal-50 text-teal-700 px-3 py-1 rounded-xl text-[10px] font-bold uppercase tracking-wider">
+                    {tier}
+                  </div>
                 </div>
-                <div className="bg-teal-50 text-teal-700 px-3 py-1 rounded-xl text-[10px] font-bold uppercase tracking-wider">
-                  {claim.badge?.tier || "UNKNOWN"}
+                
+                <div className="h-px bg-slate-100 my-3" />
+                
+                <div className="flex items-center gap-2 mb-3">
+                  <Medal className="w-5 h-5 text-amber-500" />
+                  <span className="font-semibold text-sm text-slate-800">
+                    Claiming Badge: {badgeName}
+                  </span>
+                </div>
+                
+                <div className="bg-slate-50 border border-slate-100 rounded-xl p-3 flex gap-2 items-start">
+                  <Link className="w-4 h-4 text-indigo-600 shrink-0 mt-0.5" />
+                  <a href={claim.evidenceUrl || "#"} target="_blank" rel="noreferrer" className="text-xs text-indigo-600 hover:underline break-all">
+                    {claim.evidenceUrl || "No evidence provided"}
+                  </a>
                 </div>
               </div>
               
-              <div className="h-px bg-slate-100 my-3" />
-              
-              <div className="flex items-center gap-2 mb-3">
-                <Medal className="w-5 h-5 text-amber-500" />
-                <span className="font-semibold text-sm text-slate-800">
-                  Claiming Badge: {claim.badge?.name || ""}
-                </span>
-              </div>
-              
-              <div className="bg-slate-50 border border-slate-100 rounded-xl p-3 flex gap-2 items-start">
-                <Link className="w-4 h-4 text-indigo-600 shrink-0 mt-0.5" />
-                <a href={claim.evidenceUrl || "#"} target="_blank" rel="noreferrer" className="text-xs text-indigo-600 hover:underline break-all">
-                  {claim.evidenceUrl || "No evidence provided"}
-                </a>
+              <div className="bg-slate-50 border-t border-slate-100 p-3 flex justify-end gap-3">
+                <button 
+                  onClick={() => rejectClaim(claim.id, badgeName)}
+                  className="px-4 py-2 text-sm font-bold text-red-500 hover:bg-red-50 rounded-xl transition-colors"
+                >
+                  Reject
+                </button>
+                <button 
+                  onClick={() => approveClaim(claim.id, badgeName)}
+                  className="flex items-center gap-2 bg-teal-600 hover:bg-teal-700 text-white px-5 py-2 rounded-xl text-sm font-bold transition-colors shadow-sm"
+                >
+                  <CheckCircle2 className="w-4 h-4" /> Approve Claim
+                </button>
               </div>
             </div>
-            
-            <div className="bg-slate-50 border-t border-slate-100 p-3 flex justify-end gap-3">
-              <button 
-                onClick={() => rejectClaim(claim.id)}
-                className="px-4 py-2 text-sm font-bold text-red-500 hover:bg-red-50 rounded-xl transition-colors"
-              >
-                Reject
-              </button>
-              <button 
-                onClick={() => approveClaim(claim.id, claim.badge?.name || "")}
-                className="flex items-center gap-2 bg-teal-600 hover:bg-teal-700 text-white px-5 py-2 rounded-xl text-sm font-bold transition-colors shadow-sm"
-              >
-                <CheckCircle2 className="w-4 h-4" />
-                Approve Claim
-              </button>
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     );
   };

@@ -59,10 +59,10 @@ export default function LevelsBadgesTab() {
   const [activeTab, setActiveTab] = useState<'levels' | 'badges'>('levels');
   const [isLoading, setIsLoading] = useState(true);
   
-  const [studentXp, setStudentXp] = useState(95);
+  const [studentXp, setStudentXp] = useState(0);
   const [selectedPathway, setSelectedPathway] = useState<string>("None");
   
-  const [earnedBadgeNames, setEarnedBadgeNames] = useState<string[]>(["Attendance Warrior", "Punctuality Pro"]);
+  const [earnedBadgeNames, setEarnedBadgeNames] = useState<string[]>([]);
   const [pendingBadgeNames, setPendingBadgeNames] = useState<string[]>([]);
   
   const [isSubmitModalOpen, setIsSubmitModalOpen] = useState(false);
@@ -73,8 +73,10 @@ export default function LevelsBadgesTab() {
     const loadData = async () => {
       try {
         const profileRes = await apiClient.get('/api/v1/auth/me');
-        if (profileRes.data.success) {
-          setStudentXp(profileRes.data.data.totalXp ?? 95);
+        if (profileRes.data.success && profileRes.data.data) {
+          const d = profileRes.data.data;
+          const xp = d.totalXp ?? d.score ?? d.currentXp ?? d.xp ?? 0;
+          setStudentXp(xp);
         }
       } catch {
         // Fallback

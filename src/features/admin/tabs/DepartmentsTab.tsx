@@ -48,14 +48,65 @@ export default function DepartmentsTab({ onBack }: Props) {
     }
   };
 
+  const [deptSections, setDeptSections] = useState<any[]>([]);
+  const [newSectionName, setNewSectionName] = useState('');
+  const [isLoadingSections, setIsLoadingSections] = useState(false);
+
+  const fetchDeptSections = async (deptId: number) => {
+    setIsLoadingSections(true);
+    try {
+      const response = await apiClient.get(`/api/v1/admin/departments/${deptId}/sections`);
+      if (response.data?.success || response.data?.data) {
+        setDeptSections(response.data.data || response.data || []);
+      } else {
+        setDeptSections([]);
+      }
+    } catch (e) {
+      console.error("Failed to load sections", e);
+      setDeptSections([]);
+    } finally {
+      setIsLoadingSections(false);
+    }
+  };
+
   const openModal = (dept: any = null) => {
     setEditingDept(dept);
     if (dept) {
       setFormData({ name: dept.name || '', code: dept.code || '' });
+      fetchDeptSections(dept.id);
     } else {
       setFormData({ name: '', code: '' });
+      setDeptSections([]);
     }
+    setNewSectionName('');
     setIsModalOpen(true);
+  };
+
+  const handleAddSection = async () => {
+    if (!editingDept || !newSectionName.trim()) return;
+    try {
+      await apiClient.post(`/api/v1/admin/departments/${editingDept.id}/sections`, {
+        sectionName: newSectionName.trim(),
+        name: newSectionName.trim()
+      });
+      setNewSectionName('');
+      fetchDeptSections(editingDept.id);
+    } catch (e: any) {
+      console.error(e);
+      alert(e.response?.data?.message || 'Failed to add section');
+    }
+  };
+
+  const handleDeleteSection = async (sectionId: number) => {
+    if (!editingDept) return;
+    if (!window.confirm('Delete this section?')) return;
+    try {
+      await apiClient.delete(`/api/v1/admin/departments/${editingDept.id}/sections/${sectionId}`);
+      fetchDeptSections(editingDept.id);
+    } catch (e: any) {
+      console.error(e);
+      alert(e.response?.data?.message || 'Failed to delete section');
+    }
   };
 
   const handleSave = async (e: React.FormEvent) => {
@@ -203,14 +254,47 @@ export default function DepartmentsTab({ onBack }: Props) {
                   <div>
                     <p className="text-[11px] font-bold text-slate-500 tracking-wider mb-3">SECTIONS MANAGEMENT</p>
                     <div className="flex gap-2 mb-4">
-                      <input type="text" placeholder="Add Section (e.g. A, B)" className="flex-1 px-3 py-2.5 border border-slate-300 rounded-lg outline-none focus:border-slate-400 text-sm" />
-                      <button type="button" className="bg-slate-900 text-white px-4 py-2.5 rounded-lg hover:bg-slate-800 transition-colors">
+                      <input 
+                        type="text" 
+                        value={newSectionName} 
+                        onChange={e => setNewSectionName(e.target.value)}
+                        placeholder="Add Section (e.g. A, B)" 
+                        className="flex-1 px-3 py-2.5 border border-slate-300 rounded-lg outline-none focus:border-slate-400 text-sm" 
+                      />
+                      <button 
+                        type="button" 
+                        onClick={handleAddSection} 
+                        className="bg-slate-900 text-white px-4 py-2.5 rounded-lg hover:bg-slate-800 transition-colors"
+                      >
                         <Plus className="w-5 h-5" />
                       </button>
                     </div>
-                    <div className="text-center py-4 bg-slate-50 border border-slate-100 rounded-xl">
-                      <p className="text-sm text-slate-400 italic">No sections created yet. (UI Mock)</p>
-                    </div>
+
+                    {isLoadingSections ? (
+                      <div className="text-center py-4 text-slate-400 text-xs flex items-center justify-center">
+                        <RefreshCw className="w-4 h-4 animate-spin mr-2" />
+                        Loading sections...
+                      </div>
+                    ) : deptSections.length === 0 ? (
+                      <div className="text-center py-4 bg-slate-50 border border-slate-100 rounded-xl">
+                        <p className="text-sm text-slate-450">No sections added yet.</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
+                        {deptSections.map((sec: any) => (
+                          <div key={sec.id} className="flex items-center justify-between p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs">
+                            <span className="font-semibold text-slate-800">Section {sec.sectionName || sec.name}</span>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteSection(sec.id)}
+                              className="text-rose-600 hover:text-rose-800 p-1 rounded-md"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </>
               )}
@@ -220,7 +304,7 @@ export default function DepartmentsTab({ onBack }: Props) {
                   Cancel
                 </button>
                 <button type="submit" className="px-6 py-2 bg-slate-900 text-white font-semibold rounded-lg hover:bg-slate-800 transition-colors">
-                  {editingDept ? 'Save' : 'Save'}
+                  Save
                 </button>
               </div>
             </form>

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ArrowLeft, Save, Calendar } from 'lucide-react';
+import { ArrowLeft, Save } from 'lucide-react';
 import apiClient from '../../../services/apiClient';
 
 interface Props {
@@ -12,26 +12,33 @@ export default function EditStagePage({ onBack, stage }: Props) {
     name: stage.name || '',
     description: stage.description || '',
     displayOrder: stage.displayOrder?.toString() || '0',
-    startDate: stage.startDate ? stage.startDate.split('T')[0] : '',
-    endDate: stage.endDate ? stage.endDate.split('T')[0] : '',
+    expectedXp: (stage.expectedXp ?? 0).toString(),
+    mustThreshold: (stage.mustThreshold ?? 0).toString(),
+    individualThreshold: (stage.individualThreshold ?? 0).toString(),
+    groupThreshold: (stage.groupThreshold ?? 0).toString(),
+    startDate: stage.startDate ? stage.startDate.split('T')[0] : (stage.startDateTime ? stage.startDateTime.split('T')[0] : ''),
+    endDate: stage.endDate ? stage.endDate.split('T')[0] : (stage.endDateTime ? stage.endDateTime.split('T')[0] : ''),
     isActive: stage.isActive ?? stage.active ?? true
   });
   const [isSaving, setIsSaving] = useState(false);
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.startDate || !formData.endDate) {
-      alert('Please select both Start and End dates');
-      return;
-    }
-
     setIsSaving(true);
     try {
-      const payload = {
-        ...formData,
+      const payload: any = {
+        name: formData.name.trim(),
+        description: formData.description.trim(),
         displayOrder: parseInt(formData.displayOrder) || 0,
+        expectedXp: parseInt(formData.expectedXp) || 0,
+        mustThreshold: parseInt(formData.mustThreshold) || 0,
+        individualThreshold: parseInt(formData.individualThreshold) || 0,
+        groupThreshold: parseInt(formData.groupThreshold) || 0,
         active: formData.isActive
       };
+
+      if (formData.startDate) payload.startDate = formData.startDate;
+      if (formData.endDate) payload.endDate = formData.endDate;
       
       const response = await apiClient.put(`/api/v1/admin/stages/${stage.id}`, payload);
       if (response.data?.success || response.status === 200 || response.status === 201) {
@@ -39,9 +46,9 @@ export default function EditStagePage({ onBack, stage }: Props) {
       } else {
         alert(response.data?.message || 'Failed to update stage');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
-      alert('Error updating stage');
+      alert(error.response?.data?.message || 'Error updating stage');
     } finally {
       setIsSaving(false);
     }
@@ -84,33 +91,15 @@ export default function EditStagePage({ onBack, stage }: Props) {
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-1">
-                <label className="text-sm font-medium text-slate-700 flex items-center">
-                  <Calendar className="w-4 h-4 mr-1 text-slate-400" /> Start Date *
-                </label>
+                <label className="text-sm font-medium text-slate-700">Expected XP Points</label>
                 <input 
-                  required 
-                  type="date" 
-                  value={formData.startDate} 
-                  onChange={e => setFormData({...formData, startDate: e.target.value})} 
+                  type="number" 
+                  value={formData.expectedXp} 
+                  onChange={e => setFormData({...formData, expectedXp: e.target.value})} 
+                  placeholder="e.g. 100"
                   className="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-shadow"
                 />
               </div>
-              <div className="space-y-1">
-                <label className="text-sm font-medium text-slate-700 flex items-center">
-                  <Calendar className="w-4 h-4 mr-1 text-slate-400" /> End Date *
-                </label>
-                <input 
-                  required 
-                  type="date" 
-                  value={formData.endDate} 
-                  min={formData.startDate}
-                  onChange={e => setFormData({...formData, endDate: e.target.value})} 
-                  className="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-shadow"
-                />
-              </div>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-1">
                 <label className="text-sm font-medium text-slate-700">Display Order</label>
                 <input 
@@ -120,18 +109,74 @@ export default function EditStagePage({ onBack, stage }: Props) {
                   className="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-shadow"
                 />
               </div>
-              <div className="flex items-center pt-6 space-x-3">
-                <label className="relative inline-flex items-center cursor-pointer">
-                  <input 
-                    type="checkbox" 
-                    checked={formData.isActive} 
-                    onChange={e => setFormData({...formData, isActive: e.target.checked})} 
-                    className="sr-only peer" 
-                  />
-                  <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                  <span className="ml-3 text-sm font-medium text-slate-700">Active Status</span>
-                </label>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="space-y-1">
+                <label className="text-sm font-medium text-slate-700">Must-Do Threshold</label>
+                <input 
+                  type="number" 
+                  value={formData.mustThreshold} 
+                  onChange={e => setFormData({...formData, mustThreshold: e.target.value})} 
+                  placeholder="e.g. 20"
+                  className="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-shadow"
+                />
               </div>
+              <div className="space-y-1">
+                <label className="text-sm font-medium text-slate-700">Individual Threshold</label>
+                <input 
+                  type="number" 
+                  value={formData.individualThreshold} 
+                  onChange={e => setFormData({...formData, individualThreshold: e.target.value})} 
+                  placeholder="e.g. 30"
+                  className="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-shadow"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-sm font-medium text-slate-700">Group Threshold</label>
+                <input 
+                  type="number" 
+                  value={formData.groupThreshold} 
+                  onChange={e => setFormData({...formData, groupThreshold: e.target.value})} 
+                  placeholder="e.g. 50"
+                  className="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-shadow"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <label className="text-sm font-medium text-slate-700">Start Date (Optional)</label>
+                <input 
+                  type="date" 
+                  value={formData.startDate} 
+                  onChange={e => setFormData({...formData, startDate: e.target.value})} 
+                  className="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-shadow"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-sm font-medium text-slate-700">End Date (Optional)</label>
+                <input 
+                  type="date" 
+                  value={formData.endDate} 
+                  min={formData.startDate}
+                  onChange={e => setFormData({...formData, endDate: e.target.value})} 
+                  className="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-shadow"
+                />
+              </div>
+            </div>
+            
+            <div className="flex items-center pt-2 space-x-3">
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input 
+                  type="checkbox" 
+                  checked={formData.isActive} 
+                  onChange={e => setFormData({...formData, isActive: e.target.checked})} 
+                  className="sr-only peer" 
+                />
+                <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                <span className="ml-3 text-sm font-medium text-slate-700">Active Status</span>
+              </label>
             </div>
           </div>
           

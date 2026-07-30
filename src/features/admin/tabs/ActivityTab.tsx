@@ -51,10 +51,9 @@ export default function ActivityTab({ onPushView }: Props) {
         } else {
           alert(response.data?.message || 'Failed to delete stage');
         }
-      } catch (e) {
+      } catch (e: any) {
         console.error(e);
-        // Optimistic delete on failure if mock
-        setStages(stages.filter(s => s.id !== id));
+        alert(e.response?.data?.message || 'Failed to delete stage');
       }
     }
   };

@@ -8,6 +8,8 @@ import CaptainDashboardPage from './features/captain/CaptainDashboardPage';
 import ProtectedRoute from './components/ProtectedRoute';
 
 import GroupActivityYearPage from './features/admin/activity/pages/GroupActivityYearPage';
+import GroupActivityDeptPage from './features/admin/activity/pages/GroupActivityDeptPage';
+import GroupActivitySecPage from './features/admin/activity/pages/GroupActivitySecPage';
 import GroupActivityExecutionPage from './features/admin/activity/pages/GroupActivityExecutionPage';
 import ActivityExecutionPageV2 from './features/admin/activity/pages/ActivityExecutionPageV2';
 import StudentsDirectoryPage from './features/teacher/pages/StudentsDirectoryPage';
@@ -64,12 +66,28 @@ function App() {
           } 
         />
 
-        {/* --- Phase 3: Execution Pages --- */}
+        {/* --- Execution & Drill-down Pages --- */}
         <Route 
           path="/teacher/group-activity/:activityId/year" 
           element={
             <ProtectedRoute allowedRoles={['TEACHER', 'ADMIN']}>
               <GroupActivityYearPage />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/teacher/group-activity/:activityId/dept" 
+          element={
+            <ProtectedRoute allowedRoles={['TEACHER', 'ADMIN']}>
+              <GroupActivityDeptPage />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/teacher/group-activity/:activityId/sec" 
+          element={
+            <ProtectedRoute allowedRoles={['TEACHER', 'ADMIN']}>
+              <GroupActivitySecPage />
             </ProtectedRoute>
           } 
         />

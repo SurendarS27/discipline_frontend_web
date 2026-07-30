@@ -1,23 +1,32 @@
 import apiClient from '../api/client';
 
 export const teamService = {
-  // Get all teams
-  getTeams: () => apiClient.get('/api/v1/teams'),
+  // Get all teams/groups
+  // GET /api/v1/groups
+  getTeams: () =>
+    apiClient.get('/api/v1/groups'),
 
-  // Create new team
-  createTeam: (name: string, size: number, captainStudentId: number | string, memberIds: (number | string)[]) =>
-    apiClient.post('/api/v1/teams', {
-      name,
-      size,
-      captainStudentId,
-      memberStudentIds: memberIds,
+  // Get single team
+  // GET /api/v1/groups/{id}
+  getTeam: (id: string | number) =>
+    apiClient.get(`/api/v1/groups/${id}`),
+
+  // Create team
+  // POST /api/v1/groups
+  createTeam: (name: string, size: number, captainStudentId: string | number, memberStudentIds: Array<string | number>) =>
+    apiClient.post('/api/v1/groups', {
+      name, size, captainStudentId, memberStudentIds
     }),
 
-  // Get team details
-  getTeam: (id: string | number) => apiClient.get(`/api/v1/teams/${id}`),
+  // Get captain's team
+  // GET /api/v1/groups/captain/{captainId}
+  getCaptainTeam: (captainId: string | number) =>
+    apiClient.get(`/api/v1/groups/captain/${captainId}`),
 
-  // Get team aggregate score
-  getTeamScore: (id: string | number) => apiClient.get(`/api/v1/teams/${id}/score`),
+  // Get team score summary
+  // GET /api/v1/groups/{id}/score
+  getTeamScore: (id: string | number) =>
+    apiClient.get(`/api/v1/groups/${id}/score`),
 };
 
 export default teamService;

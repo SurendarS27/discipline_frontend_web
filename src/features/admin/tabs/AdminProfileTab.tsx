@@ -88,12 +88,26 @@ export default function AdminProfileTab() {
           </div>
         </div>
 
-        <div className="mt-auto pt-10 w-full max-w-md pb-6">
+        <div className="mt-8 w-full max-w-md space-y-3 pb-6">
+          <button 
+            onClick={() => {
+              const newPass = window.prompt("Enter new password for Admin user:");
+              if (newPass && newPass.trim().length >= 4) {
+                apiClient.post('/api/v1/auth/change-password', { newPassword: newPass })
+                  .then(() => alert("Password updated successfully!"))
+                  .catch((e: any) => alert(e.response?.data?.message || "Failed to update password"));
+              }
+            }}
+            className="w-full flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-700 text-white font-bold h-[48px] rounded-2xl shadow-xs text-sm transition-colors"
+          >
+            Change Admin Password
+          </button>
+
           <button 
             onClick={handleLogout}
-            className="w-full flex items-center justify-center gap-2 bg-[#EA4335] hover:bg-red-600 text-white font-bold h-[52px] rounded-full shadow-sm text-[16px] transition-colors"
+            className="w-full flex items-center justify-center gap-2 bg-[#EA4335] hover:bg-red-600 text-white font-bold h-[48px] rounded-2xl shadow-xs text-sm transition-colors"
           >
-            <LogOut className="w-5 h-5" strokeWidth={2.5} />
+            <LogOut className="w-4 h-4" strokeWidth={2.5} />
             Sign Out
           </button>
         </div>

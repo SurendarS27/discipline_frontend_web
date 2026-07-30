@@ -64,20 +64,26 @@ export const useXpStore = create<XpState>((set) => ({
   history: mockHistory,
   streaks: mockStreaks,
   isLoading: false,
-  totalXp: Object.values(mockXpByCategory).reduce((sum, val) => sum + val, 0),
+  totalXp: 0,
 
   fetchSummary: async (studentId) => {
+    if (!studentId) return;
     set({ isLoading: true });
     try {
       const response = await apiClient.get(`/api/v1/xp/${studentId}/summary`);
       if (response.data.success && response.data.data) {
-        const xpByCategory = response.data.data;
-        const totalXp = Object.values(xpByCategory).reduce((sum: any, val: any) => sum + val, 0) as number;
-        set({ xpByCategory, totalXp });
+        const xpData = response.data.data;
+        let totalXp = 0;
+        if (typeof xpData.totalXp === 'number') {
+          totalXp = xpData.totalXp;
+        } else {
+          totalXp = Object.values(xpData).reduce((sum: number, val: any) => 
+            sum + (typeof val === 'number' ? val : 0), 0);
+        }
+        set({ xpByCategory: xpData, totalXp });
       }
     } catch (error) {
-      console.error('Failed to fetch summary, using mock');
-      // fallback handled by default mock data
+      console.error('Failed to fetch summary for student:', studentId, error);
     } finally {
       set({ isLoading: false });
     }

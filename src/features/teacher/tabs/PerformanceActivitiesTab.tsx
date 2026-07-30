@@ -61,9 +61,25 @@ export default function PerformanceActivitiesTab() {
   const [deptSearch, setDeptSearch] = useState('');
   const [studentSearch, setStudentSearch] = useState('');
 
+  const [pendingBadges, setPendingBadges] = useState(0);
+
   useEffect(() => {
     fetchMyActivities();
-  }, []);
+    if (isCC) {
+      fetchPendingBadges();
+    }
+  }, [isCC]);
+
+  const fetchPendingBadges = async () => {
+    try {
+      const res = await apiClient.get('/api/v1/cc/dashboard/stats');
+      if (res.data?.success) {
+        setPendingBadges(res.data.data?.pendingBadgeRequests ?? res.data.data?.pendingCount ?? 0);
+      }
+    } catch (e) {
+      console.error("Failed to fetch CC stats", e);
+    }
+  };
 
   const fetchMyActivities = async () => {
     setIsLoading(true);
@@ -268,13 +284,20 @@ export default function PerformanceActivitiesTab() {
         
         {/* CC Students Directory Button */}
         {isCC && currentFlowStep === 0 && (
-          <button 
-            onClick={() => navigate('/teacher/students-directory')}
-            className="p-2 bg-slate-800 rounded-full text-white hover:bg-slate-700 transition-colors flex-shrink-0 ml-4"
-            title="Students Directory"
-          >
-            <UsersRound className="w-5 h-5" />
-          </button>
+          <div className="flex items-center space-x-2 ml-4">
+            {pendingBadges > 0 && (
+              <span className="px-3 py-1 bg-amber-500/20 border border-amber-400/40 text-amber-300 text-xs font-bold rounded-full">
+                {pendingBadges} Pending Request{pendingBadges > 1 ? 's' : ''}
+              </span>
+            )}
+            <button 
+              onClick={() => navigate('/teacher/students-directory')}
+              className="p-2 bg-slate-800 rounded-full text-white hover:bg-slate-700 transition-colors flex-shrink-0"
+              title="Students Directory"
+            >
+              <UsersRound className="w-5 h-5" />
+            </button>
+          </div>
         )}
       </div>
 

@@ -36,12 +36,12 @@ export default function DashboardTab() {
   
   const [isLoading, setIsLoading] = useState(true);
   const [profile, setProfile] = useState<ProfileData>({
-    studentName: "sivaganesh",
-    studentId: "24IT077",
-    department: "Information Technology",
-    section: "A",
-    year: "III",
-    score: 95,
+    studentName: "",
+    studentId: "",
+    department: "",
+    section: "",
+    year: "",
+    score: 0,
     rank: 1,
     currentStage: 1,
     isCaptain: false,
@@ -57,30 +57,38 @@ export default function DashboardTab() {
         const res = await apiClient.get('/api/v1/auth/me');
         if (res.data.success && res.data.data) {
           const p = res.data.data;
+          const regNo = p.username || p.sprNo || "";
           setProfile(prev => ({
             ...prev,
             studentName: p.fullName || prev.studentName,
-            studentId: p.username || prev.studentId,
+            studentId: regNo,
             section: p.section || prev.section,
             year: p.year || prev.year,
             department: p.department || prev.department,
-            score: p.score ?? prev.score,
+            score: p.score ?? p.totalXp ?? prev.score,
+            rank: p.rank || prev.rank,
             currentStage: p.stage ?? prev.currentStage,
             isCaptain: p.isCaptain ?? prev.isCaptain,
           }));
+
+          if (regNo) {
+            fetchSummary(regNo);
+            fetchHistory(regNo);
+            fetchStreaks(regNo);
+          }
         }
       } catch (error) {
-        console.error("Failed to load profile");
+        console.error("Failed to load profile", error);
       } finally {
         setIsLoading(false);
       }
     };
     
     loadProfile();
-  }, [token]);
+  }, [token, fetchSummary, fetchHistory, fetchStreaks]);
 
   useEffect(() => {
-    if (profile.studentId && !isLoading) {
+    if (profile.studentId && profile.studentId !== "24IT077" && !isLoading) {
       fetchSummary(profile.studentId);
       fetchHistory(profile.studentId);
       fetchStreaks(profile.studentId);
@@ -155,7 +163,7 @@ export default function DashboardTab() {
             <span className="text-indigo-100 font-medium">Discipline Score</span>
             <Shield className="w-6 h-6 text-white/90" />
           </div>
-          <div className="text-4xl font-bold mb-5">{totalXp} Points</div>
+          <div className="text-4xl font-bold mb-5">{(totalXp || profile.score || 0)} Points</div>
           
           <div className="h-px bg-white/20 mb-4" />
           

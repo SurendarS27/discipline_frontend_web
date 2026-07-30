@@ -9,7 +9,8 @@ import TeacherGroupManagementTab from './tabs/TeacherGroupManagementTab';
 import HodPerformanceTab from './tabs/HodPerformanceTab';
 import ProfileTab from './tabs/ProfileTab';
 import AttendanceTab from './tabs/AttendanceTab';
-import { Activity, Trophy, AlertCircle, Users, BarChart3, User, CalendarDays, CalendarCheck } from 'lucide-react';
+import CCInboxTab from './tabs/CCInboxTab';
+import { Activity, Trophy, AlertCircle, Users, BarChart3, User, CalendarDays, CalendarCheck, Inbox } from 'lucide-react';
 
 export default function TeacherDashboard() {
   const { subRoles, setSubRoles } = useAuth();
@@ -22,7 +23,12 @@ export default function TeacherDashboard() {
         const res = await apiClient.get('/api/v1/auth/me');
         if (res.data.success) {
           const subs = res.data.data.subRoles || [];
-          setSubRoles(subs.map((s: string) => s.toString()));
+          const mainRoles = res.data.data.roles || [];
+          const combined = [
+            ...subs.map((s: any) => s.toString()),
+            ...mainRoles.map((r: any) => r.toString())
+          ];
+          setSubRoles(combined);
         }
       } catch (err) {
         console.error('Failed to fetch profile', err);
@@ -50,6 +56,7 @@ export default function TeacherDashboard() {
 
   if (isCC) {
     availableTabs.push({ name: 'Activities', icon: Activity, component: <ActivityTab /> });
+    availableTabs.push({ name: 'CC Inbox', icon: Inbox, component: <CCInboxTab /> });
   }
 
   availableTabs.push(

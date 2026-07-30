@@ -56,14 +56,14 @@ export default function StageDetailsPage({ onBack, stageId, stageName, stageDesc
     if (sub) {
       setFormData({
         name: sub.name || '',
-        category: sub.category || 'INDIVIDUAL',
-        threshold: sub.threshold?.toString() || ''
+        category: (sub.category || 'INDIVIDUAL').toUpperCase(),
+        threshold: sub.threshold?.toString() || '0'
       });
     } else {
       setFormData({
-        name: 'must (individual)',
+        name: '',
         category: 'INDIVIDUAL',
-        threshold: ''
+        threshold: '0'
       });
     }
     setIsModalOpen(true);
@@ -71,11 +71,14 @@ export default function StageDetailsPage({ onBack, stageId, stageName, stageDesc
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.threshold) return;
+    if (!formData.name.trim()) {
+      alert('Subgroup Name is required');
+      return;
+    }
 
     try {
       const payload = {
-        name: formData.name,
+        name: formData.name.trim(),
         category: formData.category,
         threshold: parseInt(formData.threshold) || 0
       };
@@ -88,9 +91,9 @@ export default function StageDetailsPage({ onBack, stageId, stageName, stageDesc
       
       setIsModalOpen(false);
       fetchSubgroups();
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
-      alert('Failed to save subgroup');
+      alert(e.response?.data?.message || 'Failed to save subgroup');
     }
   };
 
@@ -99,9 +102,9 @@ export default function StageDetailsPage({ onBack, stageId, stageName, stageDesc
       try {
         await apiClient.delete(`/api/v1/admin/stages/${stageId}/subgroups/${subId}`);
         fetchSubgroups();
-      } catch (e) {
+      } catch (e: any) {
         console.error(e);
-        alert('Failed to delete subgroup');
+        alert(e.response?.data?.message || 'Failed to delete subgroup');
       }
     }
   };
@@ -118,9 +121,9 @@ export default function StageDetailsPage({ onBack, stageId, stageName, stageDesc
       await apiClient.put(`/api/v1/admin/stages/${stageId}/subgroups/${selectedSubgroupForFaculty.id}/assign?facultyId=${selectedFacultyId}`);
       setIsFacultyModalOpen(false);
       fetchSubgroups();
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
-      alert('Failed to assign faculty');
+      alert(e.response?.data?.message || 'Failed to assign faculty');
     }
   };
 
@@ -157,46 +160,35 @@ export default function StageDetailsPage({ onBack, stageId, stageName, stageDesc
           </div>
         ) : subgroups.length === 0 ? (
           <div className="text-center py-10 text-slate-500 bg-white rounded-xl shadow-sm border border-slate-200">
-            No subgroups found for this stage.
+            No subgroups configured yet for this stage.
           </div>
         ) : (
           <div className="space-y-4">
             {subgroups.map(sub => (
-              <div key={sub.id} className="bg-white p-5 rounded-xl shadow-sm border border-slate-200 flex flex-col md:flex-row md:items-center justify-between">
-                <div className="flex-1 mb-4 md:mb-0 pr-4">
+              <div key={sub.id} className="bg-white p-5 rounded-xl shadow-sm border border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:border-blue-300 transition-colors">
+                <div className="flex-1">
                   <div className="flex items-center space-x-3 mb-1">
                     <h3 className="font-bold text-lg text-slate-900">{sub.name}</h3>
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-md border bg-blue-50 text-blue-700 border-blue-200 uppercase">
+                    <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 border border-blue-200">
                       {sub.category || 'INDIVIDUAL'}
                     </span>
                   </div>
-                  
-                  <div className="text-sm text-slate-600 mb-2">
-                    <span className="font-medium text-slate-900">Threshold:</span> {sub.threshold} XP required
-                  </div>
-                  
-                  {sub.assignedFacultyName ? (
-                    <div className="text-sm font-medium text-green-600 flex items-center">
-                      <UserPlus className="w-4 h-4 mr-1" />
-                      Assigned to: {sub.assignedFacultyName}
-                    </div>
-                  ) : (
-                    <div className="text-sm font-medium text-amber-500 flex items-center">
-                      <UserPlus className="w-4 h-4 mr-1" />
-                      No Faculty Assigned
-                    </div>
-                  )}
+                  <p className="text-xs text-slate-500">
+                    Threshold: <strong className="text-slate-800">{sub.threshold || 0} XP</strong>
+                    {sub.faculty && ` • Faculty: ${sub.faculty.fullName || sub.faculty.username}`}
+                  </p>
                 </div>
                 
-                <div className="flex flex-wrap items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2 self-end md:self-center">
                   <button 
                     onClick={() => openFacultyModal(sub)}
-                    className="flex-1 md:flex-none px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-medium rounded-lg transition-colors"
+                    className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-medium rounded-lg transition-colors flex items-center"
                   >
-                    Assign Faculty
+                    <UserPlus className="w-4 h-4 mr-1 text-slate-500" /> 
+                    {sub.faculty ? 'Reassign Faculty' : 'Assign Faculty'}
                   </button>
                   <button 
-                    onClick={() => onPushView('activity_list', { stageId, subgroup: sub })}
+                    onClick={() => onPushView('activity_list', { subgroup: sub })}
                     className="flex-1 md:flex-none px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 text-sm font-medium rounded-lg transition-colors flex items-center justify-center"
                   >
                     <FileText className="w-4 h-4 mr-1" /> Activities
@@ -219,7 +211,7 @@ export default function StageDetailsPage({ onBack, stageId, stageName, stageDesc
       {/* Edit/Add Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl w-full max-w-md overflow-hidden flex flex-col">
+          <div className="bg-white rounded-2xl w-full max-w-md overflow-hidden flex flex-col shadow-2xl">
             <div className="p-6 border-b border-slate-200 flex justify-between items-center bg-slate-50">
               <h2 className="text-xl font-bold text-slate-800">
                 {editingSubgroup ? 'Edit Subgroup' : 'Add New Subgroup'}
@@ -232,18 +224,37 @@ export default function StageDetailsPage({ onBack, stageId, stageName, stageDesc
             <form onSubmit={handleSave} className="p-6 space-y-4">
               <div className="space-y-1">
                 <label className="text-sm font-medium text-slate-700">Subgroup Name *</label>
-                <input required type="text" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="w-full p-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
+                <input 
+                  required 
+                  type="text" 
+                  value={formData.name} 
+                  onChange={e => setFormData({...formData, name: e.target.value})} 
+                  placeholder="e.g. Must Activities, Individual Task"
+                  className="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm" 
+                />
               </div>
               <div className="space-y-1">
                 <label className="text-sm font-medium text-slate-700">Category *</label>
-                <select value={formData.category} onChange={e => setFormData({...formData, category: e.target.value})} className="w-full p-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white">
-                  <option value="INDIVIDUAL">Individual</option>
-                  <option value="GROUP">Group</option>
+                <select 
+                  value={formData.category} 
+                  onChange={e => setFormData({...formData, category: e.target.value})} 
+                  className="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white text-sm"
+                >
+                  <option value="MUST">Must-Do Activity (MUST)</option>
+                  <option value="INDIVIDUAL">Individual Activity (INDIVIDUAL)</option>
+                  <option value="GROUP">Group Activity (GROUP)</option>
                 </select>
               </div>
               <div className="space-y-1">
                 <label className="text-sm font-medium text-slate-700">Threshold (XP) *</label>
-                <input required type="number" value={formData.threshold} onChange={e => setFormData({...formData, threshold: e.target.value})} className="w-full p-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
+                <input 
+                  required 
+                  type="number" 
+                  value={formData.threshold} 
+                  onChange={e => setFormData({...formData, threshold: e.target.value})} 
+                  placeholder="e.g. 50"
+                  className="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm" 
+                />
               </div>
               
               <div className="mt-8 flex justify-end space-x-3 pt-4">

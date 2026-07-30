@@ -13,6 +13,7 @@ export default defineConfig({
         headers: {
           Origin: 'https://pragatix.in/' ,
         },
+        },
       },
     },
   },

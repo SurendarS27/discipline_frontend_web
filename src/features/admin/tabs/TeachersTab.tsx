@@ -92,12 +92,18 @@ export default function TeachersTab({ onBack }: Props) {
       const mainRole = roles.length > 0 ? roles[0] : 'ROLE_TEACHER';
       const subRoles = roles.length > 1 ? roles.slice(1) : [];
 
+      let matchedDeptId = user.departmentId?.toString() || user.department?.id?.toString() || '';
+      if (!matchedDeptId && user.department && typeof user.department === 'string') {
+        const match = lookups.departments.find(d => (d.name || d.code || '').toLowerCase() === (user.department as string).toLowerCase());
+        if (match) matchedDeptId = match.id.toString();
+      }
+
       setFormData({
         username: user.username || '',
         password: '',
         fullName: user.fullName || '',
         email: user.email || '',
-        departmentId: user.department?.id?.toString() || '',
+        departmentId: matchedDeptId || (lookups.departments.length > 0 ? lookups.departments[0].id.toString() : ''),
         mainRole: mainRole,
         subRoles: subRoles,
         section: user.section || '',

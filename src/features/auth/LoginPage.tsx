@@ -7,6 +7,8 @@ import { Lock, User, ShieldAlert } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 import { authService } from './services/auth.service';
 
+import logoImg from '../../assets/logo.jpg';
+
 const loginSchema = z.object({
   role: z.enum(['Student', 'Teacher', 'Admin']),
   username: z.string().min(1, 'Username / ID is required'),
@@ -37,7 +39,11 @@ export default function LoginPage() {
     setError(null);
     try {
       const response = await authService.login(data);
-      const token = response.token;
+      const token = response.token || (response as any).accessToken || (response as any).jwt || '';
+      if (token) {
+        localStorage.setItem('spdms_token', token);
+        localStorage.setItem('spdms_user', JSON.stringify(response));
+      }
       
       // Determine the user's role from the backend response
       let finalRole = 'STUDENT';
@@ -60,10 +66,11 @@ export default function LoginPage() {
 
       // Call Zustand store login
       const user = {
-        id: (response as any).id || (response as any).studentId || 'unknown',
+        id: (response as any).id || (response as any).studentId || (response as any).username || 'unknown',
+        studentId: (response as any).username || (response as any).studentId || (response as any).id,
         username: data.username,
         role: finalRole,
-        name: (response as any).name || (response as any).firstName || data.username,
+        name: (response as any).fullName || (response as any).name || (response as any).firstName || data.username,
       };
       
       login(user, token);
@@ -77,14 +84,16 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-6">
-      <div className="bg-white rounded-xl p-8 max-w-md w-full shadow-lg border border-gray-100">
-        <div className="flex flex-col items-center mb-8">
-          <div className="bg-indigo-50 p-4 rounded-full mb-4">
-            <Lock className="w-10 h-10 text-indigo-600" />
-          </div>
-          <h1 className="text-2xl font-bold text-gray-900 tracking-tight">SPDMS Login</h1>
-          <p className="text-gray-500 text-sm mt-1">Enter your credentials to access your portal</p>
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-6 py-12">
+      <div className="bg-white rounded-2xl p-8 max-w-md w-full shadow-xl border border-gray-100">
+        <div className="flex flex-col items-center mb-6 text-center">
+          <img 
+            src={logoImg} 
+            alt="pragatiX Logo" 
+            className="w-40 h-auto object-contain mb-3 drop-shadow-xs" 
+          />
+          <h1 className="text-2xl font-bold text-gray-900 tracking-tight">pragatiX Portal</h1>
+          <p className="text-gray-500 text-xs mt-1 font-medium">Track. Learn. Grow.</p>
         </div>
 
         {error && (
