@@ -1,14 +1,17 @@
 import { useState, useEffect } from 'react';
 import { LogOut, FileBadge } from 'lucide-react';
+import toast from 'react-hot-toast';
 import { useAuth } from '../../../store/authContext';
 import apiClient from '../../../services/apiClient';
 import { useNavigate } from 'react-router-dom';
+import LogoutModal from '../../../components/common/LogoutModal';
 
 export default function ProfileTab() {
   const { logout } = useAuth();
   const navigate = useNavigate();
   
   const [isLoading, setIsLoading] = useState(true);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [profileData, setProfileData] = useState({
     name: "Teacher",
     email: "",
@@ -38,11 +41,11 @@ export default function ProfileTab() {
     fetchProfile();
   }, []);
 
-  const handleLogout = () => {
-    if (window.confirm("Are you sure you want to sign out?")) {
-      logout();
-      navigate('/login');
-    }
+  const handleConfirmLogout = () => {
+    setShowLogoutModal(false);
+    logout();
+    toast.success("Signed out successfully");
+    navigate('/login');
   };
 
   if (isLoading) {
@@ -68,7 +71,7 @@ export default function ProfileTab() {
         {profileData.email && (
           <p className="text-sm text-slate-500 mt-1">{profileData.email}</p>
         )}
-        <p className="text-sm text-slate-500 mt-1.5">Access Scope: Student Discipline Monitoring</p>
+        <p className="text-sm text-slate-500 mt-1.5">PragatiX — Student Discipline Monitoring</p>
 
         <div className="w-full max-w-md px-6 mt-8">
           <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 space-y-4">
@@ -99,7 +102,7 @@ export default function ProfileTab() {
 
         <div className="mt-auto w-full p-6">
           <button 
-            onClick={handleLogout}
+            onClick={() => setShowLogoutModal(true)}
             className="w-full flex items-center justify-center gap-2 bg-teal-600 hover:bg-teal-700 text-white font-bold py-3.5 rounded-xl transition-colors shadow-sm"
           >
             <LogOut className="w-5 h-5" />
@@ -107,6 +110,12 @@ export default function ProfileTab() {
           </button>
         </div>
       </div>
+
+      <LogoutModal
+        open={showLogoutModal}
+        onCancel={() => setShowLogoutModal(false)}
+        onConfirm={handleConfirmLogout}
+      />
     </div>
   );
 }

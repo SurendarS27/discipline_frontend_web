@@ -117,13 +117,20 @@ export default function StudentsDirectoryPage() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {filteredStudents.map(student => (
-              <div key={student.id} className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
+              <div 
+                key={student.id} 
+                onClick={() => navigate(`/students/${student.id}`)}
+                className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-all hover:-translate-y-1 cursor-pointer"
+              >
                 <div className="flex justify-between items-start mb-3">
                   <div className="w-12 h-12 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold text-xl">
                     {student.fullName?.charAt(0) || 'S'}
                   </div>
                   <div className="flex gap-2">
-                    <button onClick={() => deleteStudent(student.id)} className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors">
+                    <button 
+                      onClick={(e) => { e.stopPropagation(); deleteStudent(student.id); }} 
+                      className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                    >
                       <Trash2 className="w-4 h-4" />
                     </button>
                   </div>

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { RefreshCw, CheckCircle, XCircle, Users, ArrowLeft, Filter, Search, X } from 'lucide-react';
+import toast from 'react-hot-toast';
 import apiClient from '../../../services/apiClient';
 
 interface Props {
@@ -110,7 +111,7 @@ export default function AdminAttendanceTab({ onBack }: Props) {
       }
     } catch (e: any) {
       console.error("Failed to fetch attendance summary:", e);
-      alert(e.response?.data?.message || 'Error loading attendance summary');
+      toast.error(e.response?.data?.message || 'Error loading attendance summary');
     } finally {
       setIsLoading(false);
     }

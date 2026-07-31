@@ -1,13 +1,16 @@
 import { useState, useEffect } from 'react';
 import { User as UserIcon, LogOut } from 'lucide-react';
+import toast from 'react-hot-toast';
 import { useAuth } from '../../../store/authContext';
 import apiClient from '../../../services/apiClient';
 import { useNavigate } from 'react-router-dom';
+import LogoutModal from '../../../components/common/LogoutModal';
 
 export default function ProfileTab() {
   const { token, logout } = useAuth();
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(true);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
   
   const [profile, setProfile] = useState({
     studentName: "Sharugesh",
@@ -55,11 +58,11 @@ export default function ProfileTab() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
-  const handleLogout = () => {
-    if (window.confirm("Are you sure you want to sign out of your account?")) {
-      logout();
-      navigate('/login');
-    }
+  const handleConfirmLogout = () => {
+    setShowLogoutModal(false);
+    logout();
+    toast.success("Signed out successfully");
+    navigate('/login');
   };
 
   if (isLoading) {
@@ -115,13 +118,19 @@ export default function ProfileTab() {
         </div>
 
         <button 
-          onClick={handleLogout}
+          onClick={() => setShowLogoutModal(true)}
           className="w-full mt-8 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3.5 rounded-xl shadow-sm transition-colors flex items-center justify-center gap-2"
         >
           <LogOut className="w-5 h-5" />
           Sign Out
         </button>
       </div>
+
+      <LogoutModal
+        open={showLogoutModal}
+        onCancel={() => setShowLogoutModal(false)}
+        onConfirm={handleConfirmLogout}
+      />
     </div>
   );
 }

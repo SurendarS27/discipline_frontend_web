@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { ArrowLeft, Users, Award, RefreshCw } from 'lucide-react';
+import toast from 'react-hot-toast';
 import apiClient from '../../../../services/apiClient';
 
 interface Props {
@@ -76,6 +77,7 @@ export default function GroupActivityExecutionPage({ activityId: propActivityId,
     if (!scoringTeam || !activeAssignmentId) return;
 
     setIsSubmitting(true);
+    const toastId = toast.loading(`Awarding XP to ${scoringTeam.name || 'team'}...`);
     try {
       const payload = {
         assignmentId: activeAssignmentId,
@@ -85,14 +87,16 @@ export default function GroupActivityExecutionPage({ activityId: propActivityId,
       };
 
       const res = await apiClient.post(`/api/v1/group-activities/teams/${scoringTeam.id}/award-xp`, payload);
+      toast.dismiss(toastId);
       if (res.status === 200 || res.data?.success) {
-        alert('XP awarded to team successfully!');
+        toast.success('XP awarded to team successfully!');
         setScoringTeam(null);
         setRemarks('');
       }
     } catch (e: any) {
+      toast.dismiss(toastId);
       console.error("Failed to award XP:", e);
-      alert(e.response?.data?.message || 'Failed to award XP to team');
+      toast.error(e.response?.data?.message || 'Failed to award XP to team');
     } finally {
       setIsSubmitting(false);
     }

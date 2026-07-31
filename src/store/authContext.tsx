@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { apiClient } from '../api/client';
 
 export interface UserData {
   userId?: number | string;
@@ -84,6 +85,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     else localStorage.removeItem('userRole');
   }, [role]);
 
+  // Parity with Flutter: Validate token against backend on app load
+  useEffect(() => {
+    const checkAuthStatus = async () => {
+      if (!token) return;
+      try {
+        const response = await apiClient.get('/api/v1/auth/me');
+        if (response.data && response.data.success) {
+          const freshData = response.data.data;
+          setUser((prev) => ({ ...prev, ...freshData }));
+        }
+      } catch (error: any) {
+        // Only log out if backend explicitly responds with 401 Unauthorized
+        if (error.response && error.response.status === 401) {
+          console.warn("Token expired or unauthorized, logging out.");
+          logout();
+        } else {
+          console.warn("Could not reach auth check endpoint; preserving stored session.");
+        }
+      }
+    };
+    checkAuthStatus();
+  }, []);
+
   const login = (newToken: string, userData: UserData | string) => {
     setToken(newToken);
     if (typeof userData === 'string') {
@@ -91,7 +115,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser({ username: userData, roles: [userData] });
     } else {
       setUser(userData);
-      const primaryRole = userData.roles && userData.roles[0] ? userData.roles[0] : null;
+      const primaryRole = (userData.roles && userData.roles[0]) ? userData.roles[0] : (userData.role || userData.userType || null);
       if (primaryRole) setRole(primaryRole);
       if (userData.subRoles) setSubRolesState(userData.subRoles);
     }
@@ -104,6 +128,49 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  // Multi-tab logout synchronization
+  useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'spdms_token' && !e.newValue) {
+        setToken(null);
+        setUser(null);
+        setRole(null);
+        setSubRolesState([]);
+        if (window.location.pathname !== '/login') {
+          window.location.href = '/login';
+        }
+      }
+    };
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
+
+  // Inactivity Session Timeout (30 Minutes)
+  useEffect(() => {
+    if (!token) return;
+
+    const INACTIVITY_LIMIT = 30 * 60 * 1000; // 30 Minutes
+    let timeoutId: ReturnType<typeof setTimeout>;
+
+    const resetInactivityTimer = () => {
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => {
+        console.warn('Session expired due to 30 minutes of inactivity.');
+        logout();
+      }, INACTIVITY_LIMIT);
+    };
+
+    const activityEvents = ['mousemove', 'keypress', 'click', 'scroll', 'touchstart'];
+    activityEvents.forEach((evt) => window.addEventListener(evt, resetInactivityTimer));
+
+    resetInactivityTimer(); // Start initial timer
+
+    return () => {
+      clearTimeout(timeoutId);
+      activityEvents.forEach((evt) => window.removeEventListener(evt, resetInactivityTimer));
+    };
+  }, [token]);
+
   const logout = () => {
     setToken(null);
     setUser(null);
@@ -114,6 +181,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     localStorage.removeItem('userRole');
+    sessionStorage.clear();
     window.location.href = '/login';
   };
 

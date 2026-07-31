@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import Footer from '../../components/common/Footer';
 import OverviewTab from './tabs/OverviewTab';
 import ActivityTab from './tabs/ActivityTab';
 import TeacherGroupManagementTab from '../teacher/tabs/TeacherGroupManagementTab';
@@ -82,9 +83,9 @@ export default function AdminDashboard() {
       case 'stage_details':
         return <StageDetailsPage onBack={popView} stageId={currentView.props?.stageId} stageName={currentView.props?.stageName} stageDescription={currentView.props?.stageDescription} teachersList={currentView.props?.teachersList} onPushView={pushView} />;
       case 'activity_list':
-        return <ActivityListPage onBack={popView} subgroup={currentView.props?.subgroup} onPushView={pushView} />;
+        return <ActivityListPage onBack={popView} subgroup={currentView.props?.subgroup} subgroupId={currentView.props?.subgroupId} stageId={currentView.props?.stageId} subgroupName={currentView.props?.subgroupName} onPushView={pushView} />;
       case 'create_activity':
-        return <CreateActivityPage onBack={popView} subgroupId={currentView.props?.subgroupId} />;
+        return <CreateActivityPage onBack={popView} subgroupId={currentView.props?.subgroupId} stageId={currentView.props?.stageId} subgroupName={currentView.props?.subgroupName} />;
       case 'edit_activity':
         return <EditActivityPage onBack={popView} activity={currentView.props?.activity} />;
       default:
@@ -97,7 +98,7 @@ export default function AdminDashboard() {
       {/* Sidebar (Desktop) */}
       <div className="hidden md:flex w-64 flex-col bg-slate-900 text-white shadow-xl z-20">
         <div className="p-6 border-b border-slate-800">
-          <h1 className="text-xl font-bold tracking-tight">Discipline Monitor</h1>
+          <h1 className="text-xl font-bold tracking-tight">PragatiX</h1>
           <p className="text-xs text-slate-400 mt-1">Admin Portal</p>
         </div>
         <nav className="flex-1 overflow-y-auto py-4">
@@ -120,8 +121,11 @@ export default function AdminDashboard() {
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col h-screen overflow-hidden relative">
-        <div className="flex-1 overflow-y-auto md:pb-0 pb-20">
-          {renderCurrentView()}
+        <div className="flex-1 overflow-y-auto md:pb-0 pb-20 flex flex-col justify-between">
+          <div>
+            {renderCurrentView()}
+          </div>
+          <Footer />
         </div>
         
         {/* Bottom Nav (Mobile) */}

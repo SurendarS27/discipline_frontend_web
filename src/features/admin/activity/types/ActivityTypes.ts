@@ -15,15 +15,22 @@ export interface ActivityModel {
   displayOrder: number;
   status: string;
   awardXp: number;
+  awardPoints?: number;
+  xpReward?: number;
   awardEnabled: boolean;
   penaltyEnabled: boolean;
   penaltyXp: number;
+  penaltyPoints?: number;
   awardType: string;
   cap: number;
+  maxCap?: number;
   awardFrequency: string;
+  frequency?: string;
   awardDays: string[];
   xpType: string;
+  activityType?: string;
   assignmentMode: string;
+  allowStudentRequest?: boolean;
 }
 
 export interface ExecutionStudentModel {
@@ -78,3 +85,18 @@ export interface Team {
   captainId: string;
   members: any[];
 }
+
+export interface ActivityOptionModel {
+  id: number;
+  name: string;
+  description: string;
+  awardXp: number;
+  awardFrequency: string;
+  type: string;
+}
+
+export interface GroupedActivityModel {
+  subgroup: string;
+  activities: ActivityOptionModel[];
+}
+

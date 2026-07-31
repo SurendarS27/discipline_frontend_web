@@ -3,10 +3,10 @@ import { Users, School, Building2, AlertTriangle, RefreshCw, Activity, Shield, K
 import apiClient from '../../../services/apiClient';
 
 interface Props {
-  onPushView: (name: string, props?: any) => void;
+  onPushView?: (name: string, props?: any) => void;
 }
 
-export default function OverviewTab({ onPushView }: Props) {
+export default function OverviewTab({ onPushView = () => {} }: Props) {
   const [stats, setStats] = useState({
     students: 0,
     teachers: 0,
@@ -55,7 +55,7 @@ export default function OverviewTab({ onPushView }: Props) {
         </div>
         <div>
           <h2 className="text-2xl font-bold text-white mb-1">Welcome back, System Admin</h2>
-          <p className="text-sm text-slate-300">Here is a summary of the discipline monitor system metrics.</p>
+          <p className="text-sm text-slate-300">Here is a summary of the PragatiX system metrics.</p>
         </div>
       </div>
 

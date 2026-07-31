@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Plus, X, Upload, CheckCircle2, ChevronRight } from 'lucide-react';
+import toast from 'react-hot-toast';
 import { useXpStore } from '../../../store/xpStore';
 
 const CATEGORY_CONFIG: Record<string, any> = {
@@ -87,15 +88,15 @@ export default function PointReviewTab() {
 
   const handleNext = async () => {
     if (currentStep === 1 && !selectedCategory) {
-      alert("Please select a category");
+      toast.error("Please select a category");
       return;
     }
     if (currentStep === 2 && !selectedActivity) {
-      alert("Please select an activity");
+      toast.error("Please select an activity");
       return;
     }
     if (currentStep === 3 && !evidenceDesc.trim()) {
-      alert("Please describe your evidence");
+      toast.error("Please describe your evidence");
       return;
     }
 
@@ -103,6 +104,7 @@ export default function PointReviewTab() {
       setCurrentStep(prev => prev + 1);
     } else {
       setIsSubmitting(true);
+      const toastId = toast.loading("Submitting XP claim...");
       const url = evidenceDesc.trim();
       const success = await submitXpClaim(
         selectedCategory,
@@ -111,14 +113,14 @@ export default function PointReviewTab() {
         url || "Link uploaded"
       );
       
+      toast.dismiss(toastId);
       setIsSubmitting(false);
       setIsModalOpen(false);
       
       if (success) {
-        alert("XP claim submitted for approval!");
-        // We'd typically refresh here, but store methods need studentId
+        toast.success("XP claim submitted for approval!");
       } else {
-        alert("Failed to submit claim.");
+        toast.error("Failed to submit claim.");
       }
     }
   };

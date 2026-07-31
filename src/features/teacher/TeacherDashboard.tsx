@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import Footer from '../../components/common/Footer';
 import { useAuth } from '../../store/authContext';
 import apiClient from '../../services/apiClient';
 import PerformanceActivitiesTab from './tabs/PerformanceActivitiesTab';
@@ -80,7 +81,7 @@ export default function TeacherDashboard() {
       {/* Sidebar (Desktop) */}
       <div className="hidden md:flex w-64 flex-col bg-slate-900 text-white shadow-xl z-20">
         <div className="p-6 border-b border-slate-800">
-          <h1 className="text-xl font-bold tracking-tight">Discipline Monitor</h1>
+          <h1 className="text-xl font-bold tracking-tight">PragatiX</h1>
           <p className="text-xs text-slate-400 mt-1">Teacher Portal</p>
         </div>
         <nav className="flex-1 overflow-y-auto py-4">
@@ -103,8 +104,11 @@ export default function TeacherDashboard() {
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col h-screen overflow-hidden relative">
-        <div className="flex-1 overflow-y-auto md:pb-0 pb-20">
-          {currentTabComponent}
+        <div className="flex-1 overflow-y-auto md:pb-0 pb-20 flex flex-col justify-between">
+          <div>
+            {currentTabComponent}
+          </div>
+          <Footer />
         </div>
         
         {/* Bottom Nav (Mobile) */}

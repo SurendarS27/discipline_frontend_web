@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { UsersRound, RefreshCw, ChevronDown, ChevronUp, UserPlus, Edit2, Shield, UserMinus } from 'lucide-react';
+import toast from 'react-hot-toast';
 import apiClient from '../../../services/apiClient';
 
 export default function TeacherGroupManagementTab() {
@@ -24,28 +25,42 @@ export default function TeacherGroupManagementTab() {
     setIsLoading(true);
     try {
       const response = await apiClient.get('/api/v1/teams');
-      if (response.data.success) {
-        const data = response.data.data || [];
-        setGroups(data);
+      const rawData = response.data?.data || response.data || [];
+      const data = Array.isArray(rawData) ? rawData : (rawData.teamId || rawData.id ? [rawData] : []);
+      
+      setGroups(data);
+      
+      const deptSet = new Set<string>();
+      const yearSet = new Set<string>();
+      const sectionSet = new Set<string>();
+      
+      data.forEach((g: any) => {
+        const dept = g.departmentName || (typeof g.department === 'string' ? g.department : g.department?.name);
+        const year = g.yearName || g.year || g.academicYearName;
+        const sec = g.sectionName || (typeof g.section === 'string' ? g.section : g.section?.sectionName);
         
-        const deptSet = new Set<string>();
-        const yearSet = new Set<string>();
-        const sectionSet = new Set<string>();
-        
-        data.forEach((g: any) => {
-          (g.teamMembers || []).forEach((m: any) => {
-            if (m.department) deptSet.add(m.department);
-            if (m.year) yearSet.add(m.year.toString());
-            if (m.section) sectionSet.add(m.section);
-          });
+        if (dept) deptSet.add(dept);
+        if (year) yearSet.add(year.toString());
+        if (sec) sectionSet.add(sec);
+
+        const members = g.teamMembers || g.members || g.students || [];
+        members.forEach((m: any) => {
+          const mDept = m.departmentName || (typeof m.department === 'string' ? m.department : m.department?.name);
+          const mYear = m.yearName || m.year || m.academicYear;
+          const mSec = m.sectionName || (typeof m.section === 'string' ? m.section : m.section?.sectionName);
+          
+          if (mDept) deptSet.add(mDept);
+          if (mYear) yearSet.add(mYear.toString());
+          if (mSec) sectionSet.add(mSec);
         });
-        
-        setDepts(["All", ...Array.from(deptSet).sort()]);
-        setYears(["All", ...Array.from(yearSet).sort()]);
-        setSections(["All", ...Array.from(sectionSet).sort()]);
-      }
+      });
+      
+      setDepts(["All", ...Array.from(deptSet).sort()]);
+      setYears(["All", ...Array.from(yearSet).sort()]);
+      setSections(["All", ...Array.from(sectionSet).sort()]);
     } catch (e: any) {
       console.error("Error fetching teams", e);
+      toast.error("Failed to load groups");
     } finally {
       setIsLoading(false);
     }
@@ -53,10 +68,32 @@ export default function TeacherGroupManagementTab() {
 
   const getFilteredGroups = () => {
     return groups.filter(g => {
-      const members = g.teamMembers || [];
-      if (selectedDept !== "All" && !members.some((m: any) => m.department === selectedDept)) return false;
-      if (selectedYear !== "All" && !members.some((m: any) => m.year?.toString() === selectedYear)) return false;
-      if (selectedSection !== "All" && !members.some((m: any) => m.section === selectedSection)) return false;
+      const dept = g.departmentName || (typeof g.department === 'string' ? g.department : g.department?.name);
+      const year = g.yearName || g.year || g.academicYearName;
+      const sec = g.sectionName || (typeof g.section === 'string' ? g.section : g.section?.sectionName);
+      const members = g.teamMembers || g.members || g.students || [];
+
+      if (selectedDept !== "All") {
+        const matchDept = dept === selectedDept || members.some((m: any) => 
+          (m.departmentName || (typeof m.department === 'string' ? m.department : m.department?.name)) === selectedDept
+        );
+        if (!matchDept) return false;
+      }
+
+      if (selectedYear !== "All") {
+        const matchYear = year?.toString() === selectedYear || members.some((m: any) => 
+          (m.yearName || m.year || m.academicYear)?.toString() === selectedYear
+        );
+        if (!matchYear) return false;
+      }
+
+      if (selectedSection !== "All") {
+        const matchSec = sec === selectedSection || members.some((m: any) => 
+          (m.sectionName || (typeof m.section === 'string' ? m.section : m.section?.sectionName)) === selectedSection
+        );
+        if (!matchSec) return false;
+      }
+
       return true;
     });
   };
@@ -78,21 +115,25 @@ export default function TeacherGroupManagementTab() {
     if (!activeLimitTeam) return;
     const newSize = parseInt(newLimitInput, 10);
     if (isNaN(newSize) || newSize <= 0) {
-      alert("Please enter a valid positive number");
+      toast.error("Please enter a valid positive number");
       return;
     }
     
     setIsSubmitting(true);
+    const toastId = toast.loading("Updating group limit...");
     try {
       const response = await apiClient.put(`/api/v1/teams/${activeLimitTeam.id}/limit?size=${newSize}`);
+      toast.dismiss(toastId);
       if (response.data.success) {
+        toast.success("Group limit updated successfully");
         setActiveLimitTeam(null);
         fetchGroups();
       } else {
-        alert(response.data.message || "Failed to update group limit");
+        toast.error(response.data.message || "Failed to update group limit");
       }
     } catch (e: any) {
-      alert(`Error: ${e.response?.data?.message || e.message}`);
+      toast.dismiss(toastId);
+      toast.error(e.response?.data?.message || e.message);
     } finally {
       setIsSubmitting(false);
     }
@@ -108,34 +149,40 @@ export default function TeacherGroupManagementTab() {
     if (!activeAddTeamId || !studentIdInput.trim()) return;
     
     setIsSubmitting(true);
+    const toastId = toast.loading("Adding member to group...");
     try {
       const response = await apiClient.post(`/api/v1/teams/${activeAddTeamId}/add-member?studentId=${studentIdInput.trim()}`);
+      toast.dismiss(toastId);
       if (response.data.success) {
+        toast.success("Member added successfully");
         setActiveAddTeamId(null);
         setStudentIdInput('');
         fetchGroups();
       } else {
-        alert(response.data.message || "Failed to add member");
+        toast.error(response.data.message || "Failed to add member");
       }
     } catch (e: any) {
-      alert(`Error: ${e.response?.data?.message || e.message}`);
+      toast.dismiss(toastId);
+      toast.error(e.response?.data?.message || e.message);
     } finally {
       setIsSubmitting(false);
     }
   };
 
   const removeMember = async (teamId: number, studentId: string, name: string) => {
-    if (!window.confirm(`Are you sure you want to remove ${name}?`)) return;
-    
+    const toastId = toast.loading(`Removing ${name}...`);
     try {
       const response = await apiClient.post(`/api/v1/teams/${teamId}/remove-member?studentId=${studentId}`);
+      toast.dismiss(toastId);
       if (response.data.success) {
+        toast.success(`Removed ${name} from group`);
         fetchGroups();
       } else {
-        alert(response.data.message || "Failed to remove member");
+        toast.error(response.data.message || "Failed to remove member");
       }
     } catch (e: any) {
-      alert(`Error: ${e.response?.data?.message || e.message}`);
+      toast.dismiss(toastId);
+      toast.error(e.response?.data?.message || e.message);
     }
   };
 
@@ -194,18 +241,19 @@ export default function TeacherGroupManagementTab() {
         ) : (
           <div className="space-y-4">
             {filteredGroups.map(g => {
-              const isExpanded = expandedGroupId === g.teamId;
-              const captainName = g.captainName || "No Captain";
-              const members = g.teamMembers || [];
+              const tId = g.teamId || g.id;
+              const isExpanded = expandedGroupId === tId;
+              const captainName = g.captainName || g.captain?.fullName || g.captain?.username || "No Captain";
+              const members = g.teamMembers || g.members || g.students || [];
               const memberCount = members.length;
-              const size = g.teamCapacity || 0;
-              const groupName = g.teamName || "Group";
+              const size = g.teamCapacity || g.size || g.maxTeamSize || 10;
+              const groupName = g.teamName || g.name || g.groupName || `Group #${tId}`;
 
               return (
-                <div key={g.teamId} className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden transition-all duration-300">
+                <div key={tId} className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden transition-all duration-300">
                   <div 
                     className="p-4 flex items-center justify-between cursor-pointer hover:bg-slate-50"
-                    onClick={() => setExpandedGroupId(isExpanded ? null : g.teamId)}
+                    onClick={() => setExpandedGroupId(isExpanded ? null : tId)}
                   >
                     <div className="flex items-center gap-4 min-w-0">
                       <div className="w-10 h-10 rounded-full bg-indigo-50 flex items-center justify-center shrink-0 border border-indigo-100">

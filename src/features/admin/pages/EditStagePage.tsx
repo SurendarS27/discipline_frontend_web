@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { ArrowLeft, Save } from 'lucide-react';
+import toast from 'react-hot-toast';
 import apiClient from '../../../services/apiClient';
 
 interface Props {
@@ -24,7 +25,12 @@ export default function EditStagePage({ onBack, stage }: Props) {
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!formData.name.trim()) {
+      toast.error("Stage name is required");
+      return;
+    }
     setIsSaving(true);
+    const toastId = toast.loading("Updating stage...");
     try {
       const payload: any = {
         name: formData.name.trim(),
@@ -41,14 +47,17 @@ export default function EditStagePage({ onBack, stage }: Props) {
       if (formData.endDate) payload.endDate = formData.endDate;
       
       const response = await apiClient.put(`/api/v1/admin/stages/${stage.id}`, payload);
+      toast.dismiss(toastId);
       if (response.data?.success || response.status === 200 || response.status === 201) {
+        toast.success("Stage updated successfully!");
         onBack();
       } else {
-        alert(response.data?.message || 'Failed to update stage');
+        toast.error(response.data?.message || 'Failed to update stage');
       }
     } catch (error: any) {
+      toast.dismiss(toastId);
       console.error(error);
-      alert(error.response?.data?.message || 'Error updating stage');
+      toast.error(error.response?.data?.message || 'Error updating stage');
     } finally {
       setIsSaving(false);
     }

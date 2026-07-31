@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Plus, Edit2, Trash2, ArrowLeft, RefreshCw, X, UserCheck, School, Shield, User } from 'lucide-react';
+import toast from 'react-hot-toast';
 import apiClient from '../../../services/apiClient';
 
 interface Props {
@@ -269,10 +270,11 @@ export default function StudentsTab({ onBack }: Props) {
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.fullName.trim() || !formData.email.trim()) {
-      alert('Full Name and Email are required.');
+      toast.error('Full Name and Email are required.');
       return;
     }
 
+    const toastId = toast.loading("Saving student...");
     try {
       const payload: any = {
         fullName: formData.fullName.trim(),
@@ -317,23 +319,28 @@ export default function StudentsTab({ onBack }: Props) {
         payload.password = pass || '123456';
         await apiClient.post('/api/v1/students', payload);
       }
+      toast.dismiss(toastId);
+      toast.success("Student saved successfully");
       setIsModalOpen(false);
       fetchStudents();
     } catch (e: any) {
+      toast.dismiss(toastId);
       console.error("Save error:", e);
-      alert(e.response?.data?.message || 'Failed to save student. Please check input fields.');
+      toast.error(e.response?.data?.message || 'Failed to save student. Please check input fields.');
     }
   };
 
   const handleDelete = async (id: number) => {
-    if (window.confirm('Are you sure you want to delete this student?')) {
-      try {
-        await apiClient.delete(`/api/v1/students/${id}`);
-        fetchStudents();
-      } catch (e) {
-        console.error(e);
-        alert('Failed to delete student.');
-      }
+    const toastId = toast.loading("Deleting student...");
+    try {
+      await apiClient.delete(`/api/v1/students/${id}`);
+      toast.dismiss(toastId);
+      toast.success("Student deleted successfully");
+      fetchStudents();
+    } catch (e: any) {
+      toast.dismiss(toastId);
+      console.error(e);
+      toast.error(e.response?.data?.message || 'Failed to delete student.');
     }
   };
 

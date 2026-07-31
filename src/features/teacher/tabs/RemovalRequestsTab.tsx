@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Medal, UserMinus, CheckCircle2, XCircle, Link, AlertTriangle } from 'lucide-react';
+import toast from 'react-hot-toast';
 import { useAuth } from '../../../store/authContext';
 import apiClient from '../../../services/apiClient';
 
@@ -54,45 +55,54 @@ export default function RemovalRequestsTab() {
   };
 
   const approveClaim = async (claimId: number, badgeName: string) => {
+    const toastId = toast.loading(`Approving ${badgeName}...`);
     try {
       const response = await apiClient.put(`/api/v1/badges/${claimId}/approve`);
+      toast.dismiss(toastId);
       if (response.data.success) {
-        alert(`Badge '${badgeName}' successfully approved!`);
+        toast.success(`Badge '${badgeName}' successfully approved!`);
         setPendingBadgeClaims(prev => prev.filter(c => c.id !== claimId));
       } else {
-        alert(response.data.message || 'Failed to approve badge.');
+        toast.error(response.data.message || 'Failed to approve badge.');
       }
     } catch (e: any) {
-      alert(`Error approving claim: ${e.response?.data?.message || e.message}`);
+      toast.dismiss(toastId);
+      toast.error(`Error approving claim: ${e.response?.data?.message || e.message}`);
     }
   };
 
   const rejectClaim = async (claimId: number, badgeName: string) => {
+    const toastId = toast.loading(`Rejecting ${badgeName}...`);
     try {
       const response = await apiClient.put(`/api/v1/badges/${claimId}/reject`);
+      toast.dismiss(toastId);
       if (response.data.success) {
-        alert(`Badge '${badgeName}' rejected.`);
+        toast.success(`Badge '${badgeName}' rejected.`);
         setPendingBadgeClaims(prev => prev.filter(c => c.id !== claimId));
       } else {
-        alert(response.data.message || 'Failed to reject claim.');
+        toast.error(response.data.message || 'Failed to reject claim.');
       }
     } catch (e: any) {
-      alert(`Error rejecting claim: ${e.response?.data?.message || e.message}`);
+      toast.dismiss(toastId);
+      toast.error(`Error rejecting claim: ${e.response?.data?.message || e.message}`);
     }
   };
 
   const handleRemovalRequest = async (id: number, approve: boolean) => {
+    const toastId = toast.loading(`Processing removal request...`);
     try {
       const endpoint = approve ? "approve" : "reject";
       const response = await apiClient.put(`/api/v1/teams/removal-requests/${id}/${endpoint}`);
+      toast.dismiss(toastId);
       if (response.data.success) {
-        alert(`Request ${approve ? "approved" : "rejected"} successfully`);
+        toast.success(`Request ${approve ? "approved" : "rejected"} successfully`);
         fetchRemovalRequests();
       } else {
-        alert(response.data.message || 'Failed to update request');
+        toast.error(response.data.message || 'Failed to update request');
       }
     } catch (e: any) {
-      alert(`Error: ${e.message}`);
+      toast.dismiss(toastId);
+      toast.error(`Error: ${e.message}`);
     }
   };
 

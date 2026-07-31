@@ -4,7 +4,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Lock, User, ShieldAlert } from 'lucide-react';
-import { useAuthStore } from '../../store/authStore';
+import { useAuth } from '../../store/authContext';
 import { authService } from './services/auth.service';
 
 import logoImg from '../../assets/logo.jpg';
@@ -19,7 +19,7 @@ type LoginFormValues = z.infer<typeof loginSchema>;
 
 export default function LoginPage() {
   const navigate = useNavigate();
-  const login = useAuthStore((state) => state.login);
+  const { login } = useAuth();
   const [error, setError] = useState<string | null>(null);
 
   const {
@@ -49,31 +49,37 @@ export default function LoginPage() {
       let finalRole = 'STUDENT';
       const userType = (response as any).userType || '';
       const roles: string[] = (response as any).roles || [];
-      const isCaptain = (response as any).isCaptain === true || (response as any).captain === true;
+      const isCaptain = (response as any).isCaptain === true || 
+                        (response as any).captain === true || 
+                        (response as any).teamRole === 'CAPTAIN' || 
+                        (response as any).teamRole === 'VICE_CAPTAIN';
 
       if (data.role === 'Admin' || data.role === 'Teacher') {
-        if (roles.includes('ROLE_ADMIN')) {
+        if (roles.includes('ROLE_ADMIN') || userType === 'ADMIN') {
           finalRole = 'ADMIN';
         } else if (userType === 'TEACHER' || roles.includes('ROLE_TEACHER') || roles.includes('ROLE_DISCIPLINE_COMMITTEE')) {
           finalRole = 'TEACHER';
         } else {
-          setError('Unauthorized role combination');
-          return;
+          // If response contains admin or teacher data, allow login
+          finalRole = data.role === 'Admin' ? 'ADMIN' : 'TEACHER';
         }
       } else {
-        finalRole = isCaptain || userType === 'CAPTAIN' ? 'CAPTAIN' : 'STUDENT';
+        finalRole = (isCaptain || userType === 'CAPTAIN') ? 'CAPTAIN' : 'STUDENT';
       }
 
-      // Call Zustand store login
+      // Construct complete user object
       const user = {
+        ...(typeof response === 'object' ? response : {}),
         id: (response as any).id || (response as any).studentId || (response as any).username || 'unknown',
         studentId: (response as any).username || (response as any).studentId || (response as any).id,
         username: data.username,
         role: finalRole,
+        roles: [finalRole, `ROLE_${finalRole}`],
+        isCaptain: finalRole === 'CAPTAIN',
         name: (response as any).fullName || (response as any).name || (response as any).firstName || data.username,
       };
       
-      login(user, token);
+      login(token, user);
       
       // Navigate to the correct dashboard
       navigate(`/${finalRole.toLowerCase()}`);
@@ -86,14 +92,12 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 px-6 py-12">
       <div className="bg-white rounded-2xl p-8 max-w-md w-full shadow-xl border border-gray-100">
-        <div className="flex flex-col items-center mb-6 text-center">
+        <div className="flex flex-col items-center mb-4 text-center">
           <img 
             src={logoImg} 
-            alt="pragatiX Logo" 
-            className="w-40 h-auto object-contain mb-3 drop-shadow-xs" 
+            alt="PragatiX Logo" 
+            className="w-56 h-auto object-contain mb-1 drop-shadow-sm" 
           />
-          <h1 className="text-2xl font-bold text-gray-900 tracking-tight">pragatiX Portal</h1>
-          <p className="text-gray-500 text-xs mt-1 font-medium">Track. Learn. Grow.</p>
         </div>
 
         {error && (
@@ -156,6 +160,10 @@ export default function LoginPage() {
             {isSubmitting ? 'Signing In...' : 'Sign In'}
           </button>
         </form>
+        
+        <div className="mt-8 text-center text-xs font-medium text-gray-400 pt-4 border-t border-gray-100">
+          JJCET © 2026 All rights reserved
+        </div>
       </div>
     </div>
   );

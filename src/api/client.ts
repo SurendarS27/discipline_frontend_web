@@ -3,6 +3,7 @@ import { ApiConfig } from '../config/apiConfig';
 
 const baseURL = import.meta.env.VITE_API_BASE_URL || ApiConfig.baseUrl || 'http://localhost:8080';
 
+
 export const apiClient = axios.create({
   baseURL,
   headers: {

@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Search, Plus, Edit2, Trash2, ArrowLeft, RefreshCw, X } from 'lucide-react';
+import toast from 'react-hot-toast';
 import apiClient from '../../../services/apiClient';
+import ConfirmationModal from '../../../components/common/ConfirmationModal';
 
 interface Props {
   onBack?: () => void;
@@ -89,21 +91,18 @@ export default function TeachersTab({ onBack }: Props) {
     setEditingUser(user);
     if (user) {
       const roles = user.roles || [];
-      const mainRole = roles.length > 0 ? roles[0] : 'ROLE_TEACHER';
-      const subRoles = roles.length > 1 ? roles.slice(1) : [];
-
-      let matchedDeptId = user.departmentId?.toString() || user.department?.id?.toString() || '';
-      if (!matchedDeptId && user.department && typeof user.department === 'string') {
-        const match = lookups.departments.find(d => (d.name || d.code || '').toLowerCase() === (user.department as string).toLowerCase());
-        if (match) matchedDeptId = match.id.toString();
-      }
+      const mainRole = roles.includes('ROLE_TEACHER') ? 'ROLE_TEACHER' : (roles[0] || 'ROLE_TEACHER');
+      const subRoles = roles.filter((r: string) => r !== mainRole);
+      
+      const matchedDept = lookups.departments.find(d => d.name === user.departmentName);
+      const matchedDeptId = matchedDept ? matchedDept.id.toString() : (user.departmentId ? user.departmentId.toString() : '');
 
       setFormData({
         username: user.username || '',
         password: '',
         fullName: user.fullName || '',
         email: user.email || '',
-        departmentId: matchedDeptId || (lookups.departments.length > 0 ? lookups.departments[0].id.toString() : ''),
+        departmentId: matchedDeptId,
         mainRole: mainRole,
         subRoles: subRoles,
         section: user.section || '',
@@ -113,8 +112,7 @@ export default function TeachersTab({ onBack }: Props) {
     } else {
       setFormData({
         username: '', password: '', fullName: '', email: '', 
-        departmentId: lookups.departments.length > 0 ? lookups.departments[0].id.toString() : '',
-        mainRole: 'ROLE_TEACHER', subRoles: [],
+        departmentId: '', mainRole: 'ROLE_TEACHER', subRoles: [],
         section: '', year: '', subjectIds: []
       });
     }
@@ -123,6 +121,7 @@ export default function TeachersTab({ onBack }: Props) {
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
+    const toastId = toast.loading("Saving teacher...");
     try {
       const rolesToSubmit = [formData.mainRole, ...formData.subRoles];
       
@@ -139,23 +138,46 @@ export default function TeachersTab({ onBack }: Props) {
       } else {
         await apiClient.post('/api/v1/admin/users', payload);
       }
+      toast.dismiss(toastId);
+      toast.success("User saved successfully");
       setIsModalOpen(false);
       fetchUsers();
-    } catch (e) {
+    } catch (e: any) {
+      toast.dismiss(toastId);
       console.error(e);
-      alert('Failed to save user. Please try again.');
+      toast.error(e.response?.data?.message || 'Failed to save user.');
     }
   };
 
-  const handleDelete = async (id: number) => {
-    if (window.confirm('Are you sure you want to delete this user?')) {
-      try {
-        await apiClient.delete(`/api/v1/admin/users/${id}`);
-        fetchUsers();
-      } catch (e) {
-        console.error(e);
-        alert('Failed to delete user.');
-      }
+  const [deleteConfirmModal, setDeleteConfirmModal] = useState<{ open: boolean; userId: number | null; username: string }>({
+    open: false,
+    userId: null,
+    username: ''
+  });
+
+  const triggerDelete = (id: number, name: string) => {
+    setDeleteConfirmModal({
+      open: true,
+      userId: id,
+      username: name
+    });
+  };
+
+  const confirmDeleteUser = async () => {
+    const { userId, username } = deleteConfirmModal;
+    if (!userId) return;
+
+    setDeleteConfirmModal({ open: false, userId: null, username: '' });
+    const toastId = toast.loading(`Deleting ${username}...`);
+    try {
+      await apiClient.delete(`/api/v1/admin/users/${userId}`);
+      toast.dismiss(toastId);
+      toast.success("User deleted successfully");
+      fetchUsers();
+    } catch (e: any) {
+      toast.dismiss(toastId);
+      console.error(e);
+      toast.error(e.response?.data?.message || 'Failed to delete user.');
     }
   };
 
@@ -245,7 +267,7 @@ export default function TeachersTab({ onBack }: Props) {
                   <button onClick={() => openModal(user)} className="p-2.5 text-blue-600 hover:bg-blue-50 rounded-full transition-colors">
                     <Edit2 className="w-4 h-4" />
                   </button>
-                  <button onClick={() => handleDelete(user.id)} className="p-2.5 text-red-500 hover:bg-red-50 rounded-full transition-colors">
+                  <button onClick={() => triggerDelete(user.id, user.fullName || user.username)} className="p-2.5 text-red-500 hover:bg-red-50 rounded-full transition-colors">
                     <Trash2 className="w-4 h-4" />
                   </button>
                 </div>
@@ -387,6 +409,18 @@ export default function TeachersTab({ onBack }: Props) {
           </div>
         </div>
       )}
+
+      {/* Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={deleteConfirmModal.open}
+        title="Delete User"
+        description={`Are you sure you want to delete "${deleteConfirmModal.username}"? This action cannot be undone.`}
+        confirmText="Delete User"
+        cancelText="Cancel"
+        isDangerous={true}
+        onConfirm={confirmDeleteUser}
+        onCancel={() => setDeleteConfirmModal({ open: false, userId: null, username: '' })}
+      />
     </div>
   );
 }

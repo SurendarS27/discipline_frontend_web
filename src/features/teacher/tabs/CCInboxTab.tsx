@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { AlertTriangle, Check, RefreshCw, Clock, ArrowLeft, CheckCircle2, XCircle, User, Calendar } from 'lucide-react';
+import toast from 'react-hot-toast';
 import apiClient from '../../../services/apiClient';
 
 interface Props {
@@ -34,13 +35,14 @@ export default function CCInboxTab({ onBack }: Props) {
       }
     } catch (e) {
       console.error("Failed to fetch CC inbox:", e);
+      toast.error("Failed to fetch CC inbox");
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleApprove = async (id: number) => {
-    if (!window.confirm('Are you sure you want to approve this penalty request?')) return;
+    const toastId = toast.loading("Approving penalty request...");
     try {
       let response;
       try {
@@ -48,18 +50,22 @@ export default function CCInboxTab({ onBack }: Props) {
       } catch (e) {
         response = await apiClient.put(`/api/v1/penalties/${id}/approve`);
       }
+      toast.dismiss(toastId);
       if (response.status === 200 || response.data?.success) {
+        toast.success("Penalty approved successfully");
         fetchCcInbox();
       }
     } catch (e: any) {
+      toast.dismiss(toastId);
       console.error("Failed to approve penalty:", e);
-      alert(e.response?.data?.message || 'Failed to approve penalty');
+      toast.error(e.response?.data?.message || 'Failed to approve penalty');
     }
   };
 
   const handleRejectSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!rejectingItem) return;
+    const toastId = toast.loading("Rejecting penalty request...");
     try {
       let response;
       try {
@@ -71,14 +77,17 @@ export default function CCInboxTab({ onBack }: Props) {
           reason: rejectReason
         });
       }
+      toast.dismiss(toastId);
       if (response.status === 200 || response.data?.success) {
+        toast.success("Penalty rejected");
         setRejectingItem(null);
         setRejectReason('');
         fetchCcInbox();
       }
     } catch (e: any) {
+      toast.dismiss(toastId);
       console.error("Failed to reject penalty:", e);
-      alert(e.response?.data?.message || 'Failed to reject penalty');
+      toast.error(e.response?.data?.message || 'Failed to reject penalty');
     }
   };
 

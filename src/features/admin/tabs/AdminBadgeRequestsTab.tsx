@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Award, Check, RefreshCw, ExternalLink, ArrowLeft, CheckCircle2, XCircle, Clock } from 'lucide-react';
+import toast from 'react-hot-toast';
 import apiClient from '../../../services/apiClient';
 
 interface Props {
@@ -37,6 +38,7 @@ export default function AdminBadgeRequestsTab({ onBack }: Props) {
       }
     } catch (e) {
       console.error("Failed to fetch badge requests:", e);
+      toast.error("Failed to fetch badge requests");
     } finally {
       setIsLoading(false);
     }
@@ -48,7 +50,7 @@ export default function AdminBadgeRequestsTab({ onBack }: Props) {
   };
 
   const handleApprove = async (id: number) => {
-    if (!window.confirm('Are you sure you want to approve this badge request?')) return;
+    const toastId = toast.loading("Approving badge request...");
     try {
       let response;
       try {
@@ -56,18 +58,22 @@ export default function AdminBadgeRequestsTab({ onBack }: Props) {
       } catch (e) {
         response = await apiClient.put(`/api/v1/admin/badge-requests/${id}/approve`);
       }
+      toast.dismiss(toastId);
       if (response.status === 200 || response.data?.success) {
+        toast.success("Badge request approved successfully");
         fetchRequests();
       }
     } catch (e: any) {
+      toast.dismiss(toastId);
       console.error("Failed to approve badge request:", e);
-      alert(e.response?.data?.message || 'Failed to approve request');
+      toast.error(e.response?.data?.message || 'Failed to approve request');
     }
   };
 
   const handleRejectSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!rejectingReq) return;
+    const toastId = toast.loading("Rejecting badge request...");
     try {
       let response;
       try {
@@ -79,14 +85,17 @@ export default function AdminBadgeRequestsTab({ onBack }: Props) {
           reason: rejectReason
         });
       }
+      toast.dismiss(toastId);
       if (response.status === 200 || response.data?.success) {
+        toast.success("Badge request rejected");
         setRejectingReq(null);
         setRejectReason('');
         fetchRequests();
       }
     } catch (e: any) {
+      toast.dismiss(toastId);
       console.error("Failed to reject badge request:", e);
-      alert(e.response?.data?.message || 'Failed to reject request');
+      toast.error(e.response?.data?.message || 'Failed to reject request');
     }
   };
 

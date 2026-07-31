@@ -1,10 +1,11 @@
-import { Pencil, Trash2, UserPlus, BookOpen } from 'lucide-react';
+import { Pencil, Trash2, UserPlus, BookOpen, MinusCircle } from 'lucide-react';
 import type { ActivityModel } from '../types/ActivityTypes';
 
 interface ActivityCardProps {
   activity: ActivityModel;
   onEdit: () => void;
   onDelete: () => void;
+  onUnmap?: () => void;
   onAssign?: () => void;
   onTap?: () => void;
   isCc?: boolean;
@@ -15,11 +16,26 @@ export default function ActivityCard({
   activity,
   onEdit,
   onDelete,
+  onUnmap,
   onAssign,
   onTap,
   isCc = false,
   isReadOnly = false,
 }: ActivityCardProps) {
+  if (!activity) return null;
+
+  const assignments = Array.isArray(activity.assignmentSummary) ? activity.assignmentSummary : [];
+  
+  const evidenceText = Array.isArray(activity.evidence) 
+    ? activity.evidence.join(', ') 
+    : (typeof activity.evidence === 'string' ? activity.evidence : '');
+
+  const awardXp = activity.awardXp ?? activity.awardPoints ?? activity.xpReward ?? 0;
+  const penaltyXp = activity.penaltyXp ?? activity.penaltyPoints ?? 0;
+  const capVal = activity.cap ?? activity.maxCap ?? 1;
+  const freqVal = activity.awardFrequency ?? activity.frequency ?? 'Daily';
+  const typeVal = activity.type ?? activity.activityType ?? 'Individual';
+
   return (
     <div 
       onClick={onTap}
@@ -45,11 +61,20 @@ export default function ActivityCard({
             >
               {isCc ? <UserPlus className="w-5 h-5" /> : <Pencil className="w-5 h-5" />}
             </button>
+            {onUnmap && (
+              <button 
+                onClick={(e) => { e.stopPropagation(); onUnmap(); }}
+                className="p-1.5 text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
+                title="Remove from Stage"
+              >
+                <MinusCircle className="w-5 h-5" />
+              </button>
+            )}
             {!isCc && (
               <button 
                 onClick={(e) => { e.stopPropagation(); onDelete(); }}
                 className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-                title="Delete"
+                title="Delete Everywhere"
               >
                 <Trash2 className="w-5 h-5" />
               </button>
@@ -65,28 +90,28 @@ export default function ActivityCard({
       <div className="h-px bg-slate-100 my-3.5" />
 
       <div className="flex flex-wrap gap-2 mb-3.5">
-        {activity.awardEnabled && (
+        {(activity.awardEnabled ?? true) && (
           <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-green-100 text-green-800 uppercase">
-            Award: {activity.awardXp}
+            Award: {awardXp}
           </span>
         )}
         {activity.penaltyEnabled && (
           <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-red-100 text-red-800 uppercase">
-            Penalty: {activity.penaltyXp}
+            Penalty: {penaltyXp}
           </span>
         )}
         <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-teal-100 text-teal-800 uppercase">
-          Cap: {activity.cap}
+          Cap: {capVal}
         </span>
         <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800 uppercase">
-          Freq: {activity.awardFrequency}
+          Freq: {freqVal}
         </span>
         <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-purple-100 text-purple-800 uppercase">
-          Type: {activity.type}
+          Type: {typeVal}
         </span>
       </div>
 
-      {!activity.assignmentSummary || activity.assignmentSummary.length === 0 ? (
+      {assignments.length === 0 ? (
         <div className="flex items-start gap-2 mb-2">
           <UserPlus className="w-4 h-4 text-blue-500 mt-0.5 shrink-0" />
           <span className="text-xs text-gray-700 font-medium">
@@ -100,14 +125,14 @@ export default function ActivityCard({
             <span className="text-xs text-gray-800 font-bold">
               {activity.assignmentMode === 'GLOBAL'
                 ? 'Assignment Mode: Global (All Departments)'
-                : `Assignments (${activity.ownerDepartment}):`}
+                : `Assignments (${activity.ownerDepartment || 'Dept'}):`}
             </span>
           </div>
           <div className="pl-6 flex flex-col gap-1">
-            {activity.assignmentSummary.map((assign, idx) => {
+            {assignments.map((assign: any, idx: number) => {
               const text = assign.section
-                ? `Section ${assign.section} → ${assign.teacher || 'Unknown Teacher'}`
-                : `Assigned to → ${assign.teacher || 'Unknown Teacher'}`;
+                ? `Section ${assign.section} → ${assign.teacher || assign.teacherName || 'Unknown Teacher'}`
+                : `Assigned to → ${assign.teacher || assign.teacherName || 'Unknown Teacher'}`;
               return (
                 <span key={idx} className="text-xs text-gray-600">
                   • {text}
@@ -118,11 +143,11 @@ export default function ActivityCard({
         </div>
       )}
 
-      {activity.evidence && activity.evidence.length > 0 && (
+      {evidenceText && (
         <div className="flex items-start gap-2 mt-2 pt-2 border-t border-slate-50">
           <BookOpen className="w-4 h-4 text-indigo-500 mt-0.5 shrink-0" />
           <span className="text-xs text-gray-600 italic">
-            Evidence: {activity.evidence.join(', ')}
+            Evidence: {evidenceText}
           </span>
         </div>
       )}

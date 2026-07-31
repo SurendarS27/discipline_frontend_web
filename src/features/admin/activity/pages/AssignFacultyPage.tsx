@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { ArrowLeft, Save } from 'lucide-react';
+import toast from 'react-hot-toast';
 import { activityService } from '../api/activityService';
 import type { ActivityModel } from '../types/ActivityTypes';
 
@@ -68,6 +69,7 @@ export default function AssignFacultyPage({ activity, onBack }: Props) {
 
   const handleSave = async () => {
     setIsSaving(true);
+    const toastId = toast.loading("Saving assignments...");
     try {
       const formattedAssignments = [];
       if (globalEnabled && globalTeacherId) {
@@ -84,11 +86,13 @@ export default function AssignFacultyPage({ activity, onBack }: Props) {
       }
 
       await activityService.saveAssignments(activity.id, globalEnabled, formattedAssignments, ccEnabled);
-      alert('Assignments saved successfully!');
+      toast.dismiss(toastId);
+      toast.success('Assignments saved successfully!');
       onBack();
     } catch (error: any) {
+      toast.dismiss(toastId);
       console.error(error);
-      alert(error.message || 'Error saving assignments');
+      toast.error(error.message || 'Error saving assignments');
     } finally {
       setIsSaving(false);
     }

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { ChevronRight } from 'lucide-react';
+import toast from 'react-hot-toast';
 import apiClient from '../../../services/apiClient';
 
 export default function ActivityTab() {
@@ -35,7 +36,7 @@ export default function ActivityTab() {
   }, []);
 
   const handleSubgroupClick = (sub: any, stageName: string) => {
-    alert(`Navigating to manage activities for subgroup: ${sub.name} in ${stageName} (Requires Admin Activity Module Phase 5)`);
+    toast(`Managing activities for subgroup: ${sub.name} in ${stageName}`, { icon: 'ℹ️' });
   };
 
   if (isLoading) {

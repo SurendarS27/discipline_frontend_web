@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Building2, Search, Plus, Edit2, Trash2, ArrowLeft, RefreshCw, X } from 'lucide-react';
+import { Building2, Plus, Search, RefreshCw, Edit2, Trash2, ArrowLeft, X } from 'lucide-react';
+import toast from 'react-hot-toast';
 import apiClient from '../../../services/apiClient';
 
 interface Props {
@@ -83,57 +84,94 @@ export default function DepartmentsTab({ onBack }: Props) {
   };
 
   const handleAddSection = async () => {
-    if (!editingDept || !newSectionName.trim()) return;
+    if (!editingDept) return;
+    const nameToUse = newSectionName.trim();
+    if (!nameToUse) {
+      toast.error("Section name cannot be empty");
+      return;
+    }
+    const exists = deptSections.some(
+      s => (s.sectionName || s.name || '').toUpperCase() === nameToUse.toUpperCase()
+    );
+    if (exists) {
+      toast.error(`Section '${nameToUse}' already exists in this department`);
+      return;
+    }
+
+    const toastId = toast.loading("Adding section...");
     try {
       await apiClient.post(`/api/v1/admin/departments/${editingDept.id}/sections`, {
-        sectionName: newSectionName.trim(),
-        name: newSectionName.trim()
+        sectionName: nameToUse,
+        name: nameToUse
       });
+      toast.dismiss(toastId);
+      toast.success(`Section ${nameToUse} added successfully`);
       setNewSectionName('');
       fetchDeptSections(editingDept.id);
     } catch (e: any) {
+      toast.dismiss(toastId);
       console.error(e);
-      alert(e.response?.data?.message || 'Failed to add section');
+      toast.error(e.response?.data?.message || 'Failed to add section');
     }
   };
 
   const handleDeleteSection = async (sectionId: number) => {
     if (!editingDept) return;
-    if (!window.confirm('Delete this section?')) return;
+    const toastId = toast.loading("Deleting section...");
     try {
       await apiClient.delete(`/api/v1/admin/departments/${editingDept.id}/sections/${sectionId}`);
+      toast.dismiss(toastId);
+      toast.success("Section deleted successfully");
       fetchDeptSections(editingDept.id);
     } catch (e: any) {
+      toast.dismiss(toastId);
       console.error(e);
-      alert(e.response?.data?.message || 'Failed to delete section');
+      toast.error(e.response?.data?.message || 'Failed to delete section');
     }
   };
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!formData.name.trim() || !formData.code.trim()) {
+      toast.error("Department Name and Code are required.");
+      return;
+    }
+
+    const toastId = toast.loading("Saving department...");
     try {
       if (editingDept) {
-        await apiClient.put(`/api/v1/admin/departments/${editingDept.id}`, formData);
+        await apiClient.put(`/api/v1/admin/departments/${editingDept.id}`, {
+          name: formData.name.trim(),
+          code: formData.code.trim()
+        });
       } else {
-        await apiClient.post('/api/v1/admin/departments', formData);
+        await apiClient.post('/api/v1/admin/departments', {
+          name: formData.name.trim(),
+          code: formData.code.trim()
+        });
       }
+      toast.dismiss(toastId);
+      toast.success("Department updated successfully");
       setIsModalOpen(false);
       fetchDepartments();
-    } catch (e) {
+    } catch (e: any) {
+      toast.dismiss(toastId);
       console.error(e);
-      alert('Failed to save department. Please try again.');
+      toast.error(e.response?.data?.message || 'Failed to save department.');
     }
   };
 
   const handleDelete = async (id: number) => {
-    if (window.confirm('Are you sure you want to delete this department?')) {
-      try {
-        await apiClient.delete(`/api/v1/admin/departments/${id}`);
-        fetchDepartments();
-      } catch (e) {
-        console.error(e);
-        alert('Failed to delete department.');
-      }
+    const toastId = toast.loading("Deleting department...");
+    try {
+      await apiClient.delete(`/api/v1/admin/departments/${id}`);
+      toast.dismiss(toastId);
+      toast.success("Department deleted successfully");
+      fetchDepartments();
+    } catch (e: any) {
+      toast.dismiss(toastId);
+      console.error(e);
+      toast.error(e.response?.data?.message || 'Failed to delete department.');
     }
   };
 

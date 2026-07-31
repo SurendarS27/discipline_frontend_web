@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { CalendarCheck, Save, UsersRound, RefreshCw, AlertCircle } from 'lucide-react';
+import toast from 'react-hot-toast';
 import apiClient from '../../../services/apiClient';
 
 interface Student {
@@ -139,6 +140,7 @@ export default function AttendanceTab() {
     if (students.length === 0) return;
 
     setSubmitting(true);
+    const toastId = toast.loading("Saving attendance...");
     try {
       const payload = {
         date,
@@ -155,14 +157,16 @@ export default function AttendanceTab() {
       };
 
       const response = await apiClient.post('/api/teacher/attendance/save', payload);
+      toast.dismiss(toastId);
       if (response.data && response.data.success) {
-        alert('Attendance saved successfully!');
+        toast.success('Attendance saved successfully!');
       } else {
-        alert(response.data?.message || 'Failed to save attendance');
+        toast.error(response.data?.message || 'Failed to save attendance');
       }
     } catch (err: any) {
+      toast.dismiss(toastId);
       console.error('Failed to save attendance', err);
-      alert(err?.response?.data?.message || 'Error saving attendance');
+      toast.error(err?.response?.data?.message || 'Error saving attendance');
     } finally {
       setSubmitting(false);
     }
