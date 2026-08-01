@@ -170,22 +170,11 @@ export default function LevelsBadgesTab() {
     const toastId = toast.loading("Submitting badge request...");
 
     try {
-      let res;
-      try {
-        res = await apiClient.post('/api/v1/badges/submit', {
-          badgeName: badgeName,
-          evidenceUrl: validUrl
-        });
-      } catch (err: any) {
-        if (badgeId) {
-          res = await apiClient.post('/api/badge-requests', {
-            badgeId: badgeId,
-            proofLink: validUrl
-          });
-        } else {
-          throw err;
-        }
-      }
+      let res = await apiClient.post('/api/badge-requests', {
+        badgeId: badgeId || 1,
+        badgeName: badgeName,
+        proofLink: validUrl
+      });
 
       toast.dismiss(toastId);
       if (res.data?.success || res.status === 200) {

@@ -21,7 +21,11 @@ export default function ProfileTab() {
     year: "III",
     sprNo: "SPR-2024-089",
     semester: "VI Semester",
-    phone: "+91 98765 43210"
+    phone: "+91 98765 43210",
+    role: "STUDENT",
+    teamName: "No Team",
+    level: "1",
+    rank: 0,
   });
 
   useEffect(() => {
@@ -35,6 +39,35 @@ export default function ProfileTab() {
         const response = await apiClient.get('/api/v1/auth/me');
         if (response.data.success) {
           const resData = response.data.data;
+          
+          let roleVal = resData.userType ? resData.userType.toString().replace(/_/g, ' ') : (resData.teamRole ? resData.teamRole.replace(/_/g, ' ') : "STUDENT");
+          if (resData.isCaptain) roleVal = "CAPTAIN";
+          if (resData.isViceCaptain) roleVal = "VICE CAPTAIN";
+
+          let teamNameVal = resData.teamName || "";
+          let levelVal = resData.currentLevel || resData.level || "1";
+          let rankVal = resData.rank || 0;
+
+          // Try fetching team details for team name if not in auth/me
+          try {
+            const teamRes = await apiClient.get('/api/v1/teams/my-team/details');
+            if (teamRes.data.success && teamRes.data.data) {
+              const tData = teamRes.data.data;
+              if (!teamNameVal) teamNameVal = tData.teamName || tData.name || "";
+              
+              // Check if user's role inside team is captain/vice captain
+              const meInTeam = tData.members?.find((m: any) => m.studentId === resData.username || m.studentName === resData.fullName);
+              if (meInTeam) {
+                if (meInTeam.teamRole === 'CAPTAIN') roleVal = "CAPTAIN";
+                if (meInTeam.teamRole === 'VICE_CAPTAIN') roleVal = "VICE CAPTAIN";
+                if (meInTeam.rankInsideTeam) rankVal = meInTeam.rankInsideTeam;
+                if (meInTeam.currentLevel) levelVal = meInTeam.currentLevel;
+              }
+            }
+          } catch (_) {
+            // ignore team fetch error fallback
+          }
+
           setProfile({
             studentName: resData.fullName || profile.studentName,
             studentId: resData.username || profile.studentId,
@@ -45,6 +78,10 @@ export default function ProfileTab() {
             semester: resData.semester || profile.semester,
             phone: resData.phone || profile.phone,
             department: resData.department || profile.department,
+            role: roleVal,
+            teamName: teamNameVal || "No Team",
+            level: String(levelVal),
+            rank: rankVal,
           });
         }
       } catch {
@@ -98,7 +135,13 @@ export default function ProfileTab() {
         </div>
 
         <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
-          <ProfileRow label="Role" value="STUDENT" />
+          <ProfileRow label="Role" value={profile.role} />
+          <div className="h-px bg-slate-100 my-1" />
+          <ProfileRow label="Team Name" value={profile.teamName} />
+          <div className="h-px bg-slate-100 my-1" />
+          <ProfileRow label="Level" value={profile.level} />
+          <div className="h-px bg-slate-100 my-1" />
+          <ProfileRow label="Rank" value={`#${profile.rank}`} />
           <div className="h-px bg-slate-100 my-1" />
           <ProfileRow label="Full Name" value={profile.studentName} />
           <div className="h-px bg-slate-100 my-1" />

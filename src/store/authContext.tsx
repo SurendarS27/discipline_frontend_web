@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { apiClient } from '../api/client';
 
 export interface UserData {
@@ -108,7 +108,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     checkAuthStatus();
   }, []);
 
-  const login = (newToken: string, userData: UserData | string) => {
+  const login = useCallback((newToken: string, userData: UserData | string) => {
     setToken(newToken);
     if (typeof userData === 'string') {
       setRole(userData);
@@ -119,14 +119,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (primaryRole) setRole(primaryRole);
       if (userData.subRoles) setSubRolesState(userData.subRoles);
     }
-  };
+  }, []);
 
-  const setSubRoles = (roles: string[]) => {
+  const setSubRoles = useCallback((roles: string[]) => {
     setSubRolesState(roles);
-    if (user) {
-      setUser({ ...user, subRoles: roles });
-    }
-  };
+    setUser((prevUser) => prevUser ? { ...prevUser, subRoles: roles } : null);
+  }, []);
 
   // Multi-tab logout synchronization
   useEffect(() => {
@@ -143,6 +141,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
     window.addEventListener('storage', handleStorageChange);
     return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
+
+  const logout = useCallback(() => {
+    setToken(null);
+    setUser(null);
+    setRole(null);
+    setSubRolesState([]);
+    localStorage.removeItem('spdms_token');
+    localStorage.removeItem('spdms_user');
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    localStorage.removeItem('userRole');
+    sessionStorage.clear();
+    window.location.href = '/login';
   }, []);
 
   // Inactivity Session Timeout (30 Minutes)
@@ -169,21 +181,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       clearTimeout(timeoutId);
       activityEvents.forEach((evt) => window.removeEventListener(evt, resetInactivityTimer));
     };
-  }, [token]);
-
-  const logout = () => {
-    setToken(null);
-    setUser(null);
-    setRole(null);
-    setSubRolesState([]);
-    localStorage.removeItem('spdms_token');
-    localStorage.removeItem('spdms_user');
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    localStorage.removeItem('userRole');
-    sessionStorage.clear();
-    window.location.href = '/login';
-  };
+  }, [token, logout]);
 
   const isAdmin = !!(user?.roles?.includes('ROLE_ADMIN') || role === 'ADMIN' || role === 'ROLE_ADMIN');
   const isTeacher = !!(user?.roles?.includes('ROLE_TEACHER') || role === 'TEACHER' || role === 'ROLE_TEACHER');
@@ -194,11 +192,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const isCC = !!(subRoles.includes('CC') || user?.subRoles?.includes('CC'));
   const isDC = !!(subRoles.includes('Discipline Commitee') || user?.subRoles?.includes('Discipline Commitee'));
 
+  const contextValue = useMemo(() => ({
+    token, user, role, subRoles, login, setSubRoles, logout,
+    isAdmin, isTeacher, isCaptain, isStudent, isParent, isHOD, isCC, isDC
+  }), [token, user, role, subRoles, login, setSubRoles, logout, isAdmin, isTeacher, isCaptain, isStudent, isParent, isHOD, isCC, isDC]);
+
   return (
-    <AuthContext.Provider value={{ 
-      token, user, role, subRoles, login, setSubRoles, logout,
-      isAdmin, isTeacher, isCaptain, isStudent, isParent, isHOD, isCC, isDC
-    }}>
+    <AuthContext.Provider value={contextValue}>
       {children}
     </AuthContext.Provider>
   );

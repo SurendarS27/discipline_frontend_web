@@ -97,8 +97,9 @@ export default function ActivityForm({ initialData, onSubmit, onCancel = () => {
       awardEnabled: formData.awardEnabled ?? true,
       penaltyEnabled: formData.penaltyEnabled ?? false,
       awardType: formData.awardType || 'Fixed XP',
-      xpType: computedXpType,
+      awardDays: Array.isArray(formData.awardDays) ? formData.awardDays.filter(d => typeof d === 'string' && d.trim().length > 0) : [],
       xp: String(formData.awardEnabled ? (Number(formData.awardXp) || 50) : 0),
+      xpType: computedXpType,
     };
 
     onSubmit(payload);

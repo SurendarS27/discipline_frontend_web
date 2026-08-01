@@ -16,6 +16,7 @@ export default function CreateStagePage({ onBack }: Props) {
     mustThreshold: '0',
     individualThreshold: '0',
     groupThreshold: '0',
+    academicYear: 'FIRST_YEAR',
     startDate: '',
     endDate: '',
     isActive: true
@@ -39,6 +40,7 @@ export default function CreateStagePage({ onBack }: Props) {
         mustThreshold: parseInt(formData.mustThreshold) || 0,
         individualThreshold: parseInt(formData.individualThreshold) || 0,
         groupThreshold: parseInt(formData.groupThreshold) || 0,
+        academicYear: formData.academicYear,
         active: formData.isActive
       };
 
@@ -97,7 +99,20 @@ export default function CreateStagePage({ onBack }: Props) {
               />
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="space-y-1">
+                <label className="text-sm font-medium text-slate-700">Academic Year *</label>
+                <select
+                  value={formData.academicYear}
+                  onChange={e => setFormData({...formData, academicYear: e.target.value})}
+                  className="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-red-500 outline-none transition-shadow bg-white"
+                >
+                  <option value="FIRST_YEAR">1st Year (FIRST_YEAR)</option>
+                  <option value="SECOND_YEAR">2nd Year (SECOND_YEAR)</option>
+                  <option value="THIRD_YEAR">3rd Year (THIRD_YEAR)</option>
+                  <option value="FINAL_YEAR">4th Year (FINAL_YEAR)</option>
+                </select>
+              </div>
               <div className="space-y-1">
                 <label className="text-sm font-medium text-slate-700">Expected XP Points</label>
                 <input 

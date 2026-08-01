@@ -12,6 +12,8 @@ interface TeamMember {
   score?: number;
   stageLevel?: number;
   isCaptain?: boolean;
+  isViceCaptain?: boolean;
+  teamRole?: 'CAPTAIN' | 'VICE_CAPTAIN' | 'MEMBER' | string;
 }
 
 interface TeamData {
@@ -21,6 +23,8 @@ interface TeamData {
   name?: string;
   captainId?: string;
   captainName?: string;
+  viceCaptainId?: string;
+  viceCaptainName?: string;
   activityName?: string;
   assignmentName?: string;
   departmentName?: string;
@@ -184,7 +188,9 @@ export default function CaptainGroupTab() {
         ) : (
           <div className="divide-y divide-slate-100">
             {teamMembers.map((member: any, idx: number) => {
-              const isCaptain = member.regNo === team.captainId || member.isCaptain;
+              const isCaptain = member.regNo === team.captainId || member.isCaptain || member.teamRole === 'CAPTAIN';
+              const isViceCaptain = member.regNo === team.viceCaptainId || member.isViceCaptain || member.teamRole === 'VICE_CAPTAIN';
+
               return (
                 <div
                   key={idx}
@@ -195,10 +201,18 @@ export default function CaptainGroupTab() {
                       className={`w-12 h-12 rounded-full flex items-center justify-center font-bold text-lg ${
                         isCaptain
                           ? 'bg-amber-100 text-amber-700 border-2 border-amber-300'
+                          : isViceCaptain
+                          ? 'bg-slate-200 text-slate-700 border-2 border-slate-400'
                           : 'bg-indigo-100 text-indigo-700'
                       }`}
                     >
-                      {isCaptain ? <Star className="w-6 h-6 fill-amber-500 text-amber-500" /> : member.fullName?.[0] || 'S'}
+                      {isCaptain ? (
+                        <Star className="w-6 h-6 fill-amber-500 text-amber-500" />
+                      ) : isViceCaptain ? (
+                        <Award className="w-6 h-6 text-slate-600" />
+                      ) : (
+                        member.fullName?.[0] || 'S'
+                      )}
                     </div>
 
                     <div>
@@ -206,7 +220,12 @@ export default function CaptainGroupTab() {
                         <h3 className="font-semibold text-slate-900">{member.fullName || 'Student'}</h3>
                         {isCaptain && (
                           <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-amber-100 text-amber-800 border border-amber-200">
-                            Captain
+                            👑 Captain
+                          </span>
+                        )}
+                        {isViceCaptain && (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-slate-100 text-slate-800 border border-slate-300">
+                            🥈 Vice Captain
                           </span>
                         )}
                       </div>

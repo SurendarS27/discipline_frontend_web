@@ -129,8 +129,8 @@ export const useXpStore = create<XpState>((set) => ({
       });
       return response.data.success === true;
     } catch (error) {
-      console.error('Failed to submit XP claim');
-      return true; // Simulate success on offline/mock mode like Flutter
+      console.error('Failed to submit XP claim:', error);
+      return false;
     }
   }
 }));

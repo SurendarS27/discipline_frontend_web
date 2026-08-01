@@ -11,12 +11,23 @@ import HodPerformanceTab from './tabs/HodPerformanceTab';
 import ProfileTab from './tabs/ProfileTab';
 import AttendanceTab from './tabs/AttendanceTab';
 import CCInboxTab from './tabs/CCInboxTab';
+import PageLoader from '../../components/common/PageLoader';
 import { Activity, Trophy, AlertCircle, Users, BarChart3, User, CalendarDays, CalendarCheck, Inbox } from 'lucide-react';
 
 export default function TeacherDashboard() {
   const { subRoles, setSubRoles } = useAuth();
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState(0);
+  const [isTabLoading, setIsTabLoading] = useState(false);
+
+  const handleTabChange = (idx: number) => {
+    if (idx === activeTab) return;
+    setIsTabLoading(true);
+    setActiveTab(idx);
+    setTimeout(() => {
+      setIsTabLoading(false);
+    }, 350);
+  };
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -38,7 +49,8 @@ export default function TeacherDashboard() {
       }
     };
     fetchProfile();
-  }, [setSubRoles]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   if (loading) {
     return <div className="flex h-screen items-center justify-center">Loading Teacher Profile...</div>;
@@ -78,6 +90,7 @@ export default function TeacherDashboard() {
 
   return (
     <div className="flex h-screen bg-slate-50 flex-col md:flex-row">
+      {isTabLoading && <PageLoader message={`Opening ${availableTabs[activeTab]?.name || 'Page'}...`} fullScreen={true} />}
       {/* Sidebar (Desktop) */}
       <div className="hidden md:flex w-64 flex-col bg-slate-900 text-white shadow-xl z-20">
         <div className="p-6 border-b border-slate-800">
@@ -88,7 +101,7 @@ export default function TeacherDashboard() {
           {availableTabs.map((tab, idx) => (
             <button
               key={idx}
-              onClick={() => setActiveTab(idx)}
+              onClick={() => handleTabChange(idx)}
               className={`w-full flex items-center px-6 py-3 text-sm font-medium transition-colors ${
                 activeTab === idx 
                   ? 'bg-teal-600 text-white border-l-4 border-teal-400' 
@@ -117,7 +130,7 @@ export default function TeacherDashboard() {
             {availableTabs.map((tab, idx) => (
               <button
                 key={idx}
-                onClick={() => setActiveTab(idx)}
+                onClick={() => handleTabChange(idx)}
                 className={`flex flex-col items-center justify-center w-full h-full space-y-1 ${
                   activeTab === idx ? 'text-teal-600' : 'text-slate-500 hover:text-slate-700'
                 }`}

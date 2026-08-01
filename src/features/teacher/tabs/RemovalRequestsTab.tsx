@@ -57,7 +57,10 @@ export default function RemovalRequestsTab() {
   const approveClaim = async (claimId: number, badgeName: string) => {
     const toastId = toast.loading(`Approving ${badgeName}...`);
     try {
-      const response = await apiClient.put(`/api/v1/badges/${claimId}/approve`);
+      const response = await apiClient.post(`/api/v1/cc/badge-requests/${claimId}/action`, {
+        action: 'APPROVE',
+        rejectionReason: ''
+      });
       toast.dismiss(toastId);
       if (response.data.success) {
         toast.success(`Badge '${badgeName}' successfully approved!`);
@@ -74,7 +77,10 @@ export default function RemovalRequestsTab() {
   const rejectClaim = async (claimId: number, badgeName: string) => {
     const toastId = toast.loading(`Rejecting ${badgeName}...`);
     try {
-      const response = await apiClient.put(`/api/v1/badges/${claimId}/reject`);
+      const response = await apiClient.post(`/api/v1/cc/badge-requests/${claimId}/action`, {
+        action: 'REJECT',
+        rejectionReason: 'Rejected by Coordinator'
+      });
       toast.dismiss(toastId);
       if (response.data.success) {
         toast.success(`Badge '${badgeName}' rejected.`);

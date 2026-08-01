@@ -27,7 +27,7 @@ export const CaptainLoginPage: React.FC = () => {
 
       navigate('/captain/dashboard');
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Login failed. Please verify credentials.');
+      setError(err.response?.data?.message || 'Login failed. Please check credentials.');
     } finally {
       setLoading(false);
     }
@@ -72,6 +72,8 @@ export const CaptainLoginPage: React.FC = () => {
               />
             </div>
           </div>
+
+
 
           <div>
             <button

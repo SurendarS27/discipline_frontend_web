@@ -6,13 +6,24 @@ import LeaderboardTab from '../student/tabs/LeaderboardTab';
 import CaptainGroupTab from './tabs/CaptainGroupTab';
 import LevelsBadgesTab from '../student/tabs/LevelsBadgesTab';
 import ProfileTab from '../student/tabs/ProfileTab';
+import PageLoader from '../../components/common/PageLoader';
 import { LayoutDashboard, History, Trophy, Users, Medal, User } from 'lucide-react';
 
 export default function CaptainDashboardPage() {
   const [activeTab, setActiveTab] = useState(0);
+  const [isTabLoading, setIsTabLoading] = useState(false);
+
+  const handleTabChange = (idx: number) => {
+    if (idx === activeTab) return;
+    setIsTabLoading(true);
+    setActiveTab(idx);
+    setTimeout(() => {
+      setIsTabLoading(false);
+    }, 350);
+  };
 
   const tabs = [
-    { name: 'Dashboard', icon: LayoutDashboard, component: <DashboardTab /> },
+    { name: 'Dashboard', icon: LayoutDashboard, component: <DashboardTab onSelectTab={handleTabChange} /> },
     { name: 'Point Review', icon: History, component: <PointReviewTab /> },
     { name: 'Leaderboard', icon: Trophy, component: <LeaderboardTab /> },
     { name: 'My Group', icon: Users, component: <CaptainGroupTab /> },
@@ -22,6 +33,8 @@ export default function CaptainDashboardPage() {
 
   return (
     <div className="flex h-screen bg-slate-50 flex-col md:flex-row">
+      {isTabLoading && <PageLoader message={`Opening ${tabs[activeTab].name}...`} fullScreen={true} />}
+
       {/* Sidebar (Desktop) */}
       <div className="hidden md:flex w-64 flex-col bg-slate-900 text-white shadow-xl z-20">
         <div className="p-6 border-b border-slate-800">
@@ -32,7 +45,7 @@ export default function CaptainDashboardPage() {
           {tabs.map((tab, idx) => (
             <button
               key={idx}
-              onClick={() => setActiveTab(idx)}
+              onClick={() => handleTabChange(idx)}
               className={`w-full flex items-center px-6 py-3 text-sm font-medium transition-colors ${
                 activeTab === idx 
                   ? 'bg-indigo-600 text-white border-l-4 border-indigo-400' 
@@ -61,7 +74,7 @@ export default function CaptainDashboardPage() {
             {tabs.map((tab, idx) => (
               <button
                 key={idx}
-                onClick={() => setActiveTab(idx)}
+                onClick={() => handleTabChange(idx)}
                 className={`flex flex-col items-center justify-center w-full h-full space-y-1 ${
                   activeTab === idx ? 'text-indigo-600' : 'text-slate-500 hover:text-slate-700'
                 }`}

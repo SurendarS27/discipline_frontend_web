@@ -7,14 +7,14 @@ interface PageLoaderProps {
 
 export default function PageLoader({ message = 'Loading...', fullScreen = true }: PageLoaderProps) {
   const content = (
-    <div className="flex flex-col items-center justify-center p-8 text-center animate-fadeIn">
+    <div className="flex flex-col items-center justify-center p-6 text-center animate-fadeIn">
       {/* Logo with pulsing glow & spinner ring */}
-      <div className="relative mb-6">
+      <div className="relative mb-5">
         {/* Glow backdrop */}
-        <div className="absolute -inset-4 rounded-full bg-gradient-to-r from-amber-500/30 to-red-500/30 blur-xl animate-pulse" />
+        <div className="absolute -inset-3 rounded-full bg-gradient-to-r from-amber-500/30 to-red-500/30 blur-lg animate-pulse" />
         
         {/* Logo Card */}
-        <div className="relative z-10 w-32 h-32 sm:w-36 sm:h-36 rounded-2xl bg-white shadow-2xl p-2 border border-orange-100 flex items-center justify-center overflow-hidden">
+        <div className="relative z-10 w-20 h-20 sm:w-24 sm:h-24 rounded-2xl bg-white shadow-xl p-3 border border-orange-100 flex items-center justify-center overflow-hidden">
           <img 
             src={logoImg} 
             alt="PragatiX Logo" 
@@ -23,7 +23,7 @@ export default function PageLoader({ message = 'Loading...', fullScreen = true }
         </div>
 
         {/* Orbiting spinner ring */}
-        <div className="absolute -inset-2 rounded-2xl border-2 border-transparent border-t-orange-500 border-r-blue-600 animate-spin" />
+        <div className="absolute -inset-2 rounded-2xl border-2 border-transparent border-t-orange-500 border-r-indigo-600 animate-spin" />
       </div>
 
       {/* Loading Title & Message */}
@@ -38,7 +38,7 @@ export default function PageLoader({ message = 'Loading...', fullScreen = true }
 
   if (fullScreen) {
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-md transition-opacity duration-300">
+      <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-900/60 backdrop-blur-md transition-opacity duration-300">
         <div className="bg-white/95 rounded-3xl p-6 shadow-2xl border border-white/20 max-w-xs w-full mx-4">
           {content}
         </div>

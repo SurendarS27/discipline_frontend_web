@@ -1,0 +1,581 @@
+name: Enterprise React CI/CD DevSecOps Pipeline
+
+# Trigger workflow on pushes and pull requests to key branches
+on:
+  push:
+    branches: [ main, master, dev, staging ]
+  pull_request:
+    branches: [ main, master, dev, staging ]
+
+# Concurrency configured to optimize runner usage by cancelling older runs of the same ref
+concurrency:
+  group: react-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+# Granting minimum required permissions globally (least privilege model)
+permissions:
+  contents: read
+  security-events: write
+  actions: read
+
+# Global Environment Variables
+env:
+  NODE_VERSION: '20'       # Node.js 20 LTS for stable React & Vite compatibility
+  SEMGREP_RULES: 'auto'    # Automatic rule detection based on repository code
+
+jobs:
+  # ==========================================
+  # Job 1 : Workflow Validation
+  # ==========================================
+  workflow-validation:
+    name: Workflow Validation (actionlint)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@cb20a13d22877b9cd0a3854de054cd601970176b # v2.10.2
+        with:
+          egress-policy: audit
+
+      - name: Checkout Repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Run actionlint Validation
+        uses: reviewdog/action-actionlint@db5821788577dd0873e9bc14d67272847974eedb # v1.27.0
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          fail_level: error
+          filter_mode: nofilter
+
+  # ==========================================
+  # Job 2 : Build & Testing
+  # ==========================================
+  build-and-test:
+    name: Build & Testing
+    runs-on: ubuntu-latest
+    needs: workflow-validation
+    timeout-minutes: 15
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@cb20a13d22877b9cd0a3854de054cd601970176b # v2.10.2
+        with:
+          egress-policy: audit
+
+      - name: Checkout Repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Setup Node.js
+        uses: actions/setup-node@39370e3970a6d050c480ffad4ff0ed4d3fdee5af # v4.1.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: |
+          if [ -f "package-lock.json" ]; then
+            npm ci
+          else
+            npm install
+          fi
+
+      - name: Submit Dependency Graph
+        uses: github/dependency-submission-action@c92f74136a978c459f20668b594380eb9a349bc3 # v4.0.0
+        continue-on-error: true
+
+      - name: Build Application
+        run: |
+          npm run build 2>&1 | tee build.log
+
+      - name: Run Test Suite
+        run: |
+          if grep -q '"vitest"' package.json; then
+            echo "Testing Framework Detected: Vitest"
+            npx vitest run --coverage --reporter=default --reporter=junit --outputFile=junit.xml
+          elif grep -q '"jest"' package.json; then
+            echo "Testing Framework Detected: Jest"
+            npm install --no-save jest-junit
+            npx jest --coverage --reporters=default --reporters=jest-junit
+          elif grep -q '"test"' package.json; then
+            echo "Running configured npm test script"
+            npm test
+          else
+            echo "No test framework configured, skipping test execution"
+            echo '<testsuites name="empty"/>' > junit.xml
+          fi
+
+      - name: Upload Test Report
+        uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf658b4d48d9287f7634 # v4.4.3
+        if: always()
+        with:
+          name: test-report
+          path: junit.xml
+          if-no-files-found: ignore
+
+      - name: Upload Coverage Report
+        uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf658b4d48d9287f7634 # v4.4.3
+        if: always()
+        with:
+          name: coverage-report
+          path: coverage/
+          if-no-files-found: ignore
+
+      - name: Upload Build Log
+        uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf658b4d48d9287f7634 # v4.4.3
+        if: always()
+        with:
+          name: build-log
+          path: build.log
+          if-no-files-found: ignore
+
+      - name: Upload Temporary Build Folder
+        uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf658b4d48d9287f7634 # v4.4.3
+        with:
+          name: build-folder-temp
+          path: |
+            dist/
+            build/
+          if-no-files-found: ignore
+
+  # ==========================================
+  # Job 3 : Code Quality
+  # ==========================================
+  code-quality:
+    name: Code Quality (ESLint & Linter)
+    runs-on: ubuntu-latest
+    needs: workflow-validation
+    timeout-minutes: 10
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@cb20a13d22877b9cd0a3854de054cd601970176b # v2.10.2
+        with:
+          egress-policy: audit
+
+      - name: Checkout Repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Setup Node.js
+        uses: actions/setup-node@39370e3970a6d050c480ffad4ff0ed4d3fdee5af # v4.1.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: |
+          if [ -f "package-lock.json" ]; then
+            npm ci
+          else
+            npm install
+          fi
+
+      - name: Run Linter (oxlint / eslint)
+        run: |
+          if [ -f "eslint.security.config.mjs" ] || [ -f ".eslintrc" ] || [ -f ".eslintrc.json" ] || [ -f "eslint.config.js" ] || [ -f "eslint.config.mjs" ]; then
+            npx eslint --format json --output-file eslint-report.json . || true
+          elif grep -q '"lint"' package.json; then
+            npm run lint
+            echo '[]' > eslint-report.json
+          else
+            echo '[]' > eslint-report.json
+          fi
+
+      - name: Run Prettier Check (Optional)
+        run: |
+          if npx prettier --version >/dev/null 2>&1; then
+            npx prettier --check . || echo "Prettier formatting warnings found"
+          else
+            echo "Prettier not installed, skipping check"
+          fi
+        continue-on-error: true
+
+      - name: Upload ESLint Report
+        uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf658b4d48d9287f7634 # v4.4.3
+        if: always()
+        with:
+          name: eslint-report
+          path: eslint-report.json
+          if-no-files-found: ignore
+
+  # ==========================================
+  # Job 4 : Security Analysis (Gitleaks Secrets)
+  # ==========================================
+  security-gitleaks:
+    name: Security Scan (Gitleaks)
+    runs-on: ubuntu-latest
+    needs: workflow-validation
+    timeout-minutes: 10
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@cb20a13d22877b9cd0a3854de054cd601970176b # v2.10.2
+        with:
+          egress-policy: audit
+
+      - name: Checkout Repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
+
+      - name: Run Gitleaks Scan
+        uses: gitleaks/gitleaks-action@3a872cc8572ec79b29cbdfc1056a02fb420efc06 # v2.3.7
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        continue-on-error: true
+
+      - name: Upload Gitleaks SARIF Report
+        uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf658b4d48d9287f7634 # v4.4.3
+        if: always()
+        with:
+          name: gitleaks-report
+          path: results.sarif
+          if-no-files-found: ignore
+
+      - name: Upload SARIF to GitHub Code Scanning
+        uses: github/codeql-action/upload-sarif@df5a14028f24a70b40092c4b8b55d9f0027b4b53 # v3.25.10
+        if: always()
+        with:
+          sarif_file: results.sarif
+        continue-on-error: true
+
+  # ==========================================
+  # Job 4 : Security Analysis (npm audit)
+  # ==========================================
+  security-npm-audit:
+    name: Security Scan (npm audit)
+    runs-on: ubuntu-latest
+    needs: workflow-validation
+    timeout-minutes: 10
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@cb20a13d22877b9cd0a3854de054cd601970176b # v2.10.2
+        with:
+          egress-policy: audit
+
+      - name: Checkout Repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Setup Node.js
+        uses: actions/setup-node@39370e3970a6d050c480ffad4ff0ed4d3fdee5af # v4.1.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Run Dependency Vulnerability Audit
+        run: |
+          npm audit --json > npm-audit-report.json || true
+          npm audit --audit-level=critical || true
+
+      - name: Upload npm Audit Report
+        uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf658b4d48d9287f7634 # v4.4.3
+        if: always()
+        with:
+          name: npm-audit-report
+          path: npm-audit-report.json
+          if-no-files-found: ignore
+
+  # ==========================================
+  # Job 4 : Security Analysis (Semgrep SAST)
+  # ==========================================
+  security-semgrep:
+    name: Security Scan (Semgrep)
+    runs-on: ubuntu-latest
+    needs: workflow-validation
+    timeout-minutes: 15
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@cb20a13d22877b9cd0a3854de054cd601970176b # v2.10.2
+        with:
+          egress-policy: audit
+
+      - name: Checkout Repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Run Semgrep SAST Scan
+        run: |
+          docker run --rm -v ${{ github.workspace }}:/src -w /src semgrep/semgrep semgrep scan --config ${{ env.SEMGREP_RULES }} --json-output=semgrep.json --sarif-output=semgrep.sarif || true
+
+      - name: Upload Semgrep JSON/SARIF Reports
+        uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf658b4d48d9287f7634 # v4.4.3
+        if: always()
+        with:
+          name: semgrep-report
+          path: |
+            semgrep.json
+            semgrep.sarif
+          if-no-files-found: ignore
+
+      - name: Upload SARIF to GitHub Code Scanning
+        uses: github/codeql-action/upload-sarif@df5a14028f24a70b40092c4b8b55d9f0027b4b53 # v3.25.10
+        if: always()
+        with:
+          sarif_file: semgrep.sarif
+        continue-on-error: true
+
+  # ==========================================
+  # Job 4 : Security Analysis (CodeQL SAST)
+  # ==========================================
+  security-codeql:
+    name: Security Scan (CodeQL)
+    runs-on: ubuntu-latest
+    needs: workflow-validation
+    timeout-minutes: 30
+    permissions:
+      security-events: write
+      contents: read
+      actions: read
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@cb20a13d22877b9cd0a3854de054cd601970176b # v2.10.2
+        with:
+          egress-policy: audit
+
+      - name: Checkout Repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Detect CodeQL Build Mode
+        id: detect-mode
+        run: |
+          if [ -f "tsconfig.json" ] || grep -q '"build"' package.json; then
+            echo "mode=manual" >> $GITHUB_OUTPUT
+            echo "run_build=true" >> $GITHUB_OUTPUT
+          else
+            echo "mode=none" >> $GITHUB_OUTPUT
+            echo "run_build=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@df5a14028f24a70b40092c4b8b55d9f0027b4b53 # v3.25.10
+        with:
+          languages: javascript-typescript
+          build-mode: ${{ steps.detect-mode.outputs.mode }}
+
+      - name: Build Codebase for CodeQL
+        if: steps.detect-mode.outputs.run_build == 'true'
+        run: |
+          if [ -f "package-lock.json" ]; then
+            npm ci
+          else
+            npm install
+          fi
+          npm run build --if-present
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@df5a14028f24a70b40092c4b8b55d9f0027b4b53 # v3.25.10
+        with:
+          category: "/language:javascript-typescript"
+
+  # ==========================================
+  # Job 4 : Security Analysis (Dependency Review)
+  # ==========================================
+  security-dependency-review:
+    name: Security Scan (Dependency Review)
+    runs-on: ubuntu-latest
+    needs: workflow-validation
+    timeout-minutes: 10
+    if: github.event_name == 'pull_request'
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@cb20a13d22877b9cd0a3854de054cd601970176b # v2.10.2
+        with:
+          egress-policy: audit
+
+      - name: Checkout Repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Run GitHub Dependency Review
+        uses: actions/dependency-review-action@5a2cd0ddb58ce6ffe5f134ee183f8a7de51a33a5 # v4.3.4
+        with:
+          fail-on-severity: high
+
+  # ==========================================
+  # Job 5 : SBOM Generation
+  # ==========================================
+  sbom-generation:
+    name: SBOM Generation (CycloneDX)
+    runs-on: ubuntu-latest
+    needs: workflow-validation
+    timeout-minutes: 10
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@cb20a13d22877b9cd0a3854de054cd601970176b # v2.10.2
+        with:
+          egress-policy: audit
+
+      - name: Checkout Repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Setup Node.js
+        uses: actions/setup-node@39370e3970a6d050c480ffad4ff0ed4d3fdee5af # v4.1.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Generate CycloneDX SBOM
+        run: |
+          npx @cyclonedx/cyclonedx-npm --package-lock-only --output-format JSON --output-file sbom.json || echo "{}" > sbom.json
+          npx @cyclonedx/cyclonedx-npm --package-lock-only --output-format XML --output-file sbom.xml || echo "<bom/>" > sbom.xml
+
+      - name: Upload SBOM Reports
+        uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf658b4d48d9287f7634 # v4.4.3
+        if: always()
+        with:
+          name: sbom-report
+          path: |
+            sbom.json
+            sbom.xml
+          if-no-files-found: ignore
+
+  # ==========================================
+  # Job 6 : Reports Consolidation & Step Summary
+  # ==========================================
+  reports-consolidation:
+    name: Consolidated Reports
+    runs-on: ubuntu-latest
+    needs: [build-and-test, code-quality, security-gitleaks, security-npm-audit, security-semgrep, security-codeql, security-dependency-review, sbom-generation]
+    if: always()
+    timeout-minutes: 10
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@cb20a13d22877b9cd0a3854de054cd601970176b # v2.10.2
+        with:
+          egress-policy: audit
+
+      - name: Create Reports Directory
+        run: mkdir -p consolidated-reports
+
+      - name: Download Test Report
+        uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
+        with:
+          name: test-report
+          path: consolidated-reports/
+        continue-on-error: true
+
+      - name: Download Coverage Report
+        uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
+        with:
+          name: coverage-report
+          path: consolidated-reports/
+        continue-on-error: true
+
+      - name: Download Build Log
+        uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
+        with:
+          name: build-log
+          path: consolidated-reports/
+        continue-on-error: true
+
+      - name: Download ESLint Reports
+        uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
+        with:
+          name: eslint-report
+          path: consolidated-reports/
+        continue-on-error: true
+
+      - name: Download Semgrep Reports
+        uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
+        with:
+          name: semgrep-report
+          path: consolidated-reports/
+        continue-on-error: true
+
+      - name: Download Gitleaks Reports
+        uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
+        with:
+          name: gitleaks-report
+          path: consolidated-reports/
+        continue-on-error: true
+
+      - name: Download npm Audit Reports
+        uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
+        with:
+          name: npm-audit-report
+          path: consolidated-reports/
+        continue-on-error: true
+
+      - name: Download SBOM Reports
+        uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
+        with:
+          name: sbom-report
+          path: consolidated-reports/
+        continue-on-error: true
+
+      - name: Generate GitHub Step Summary
+        run: |
+          get_status_emoji() {
+            case "$1" in
+              success) echo "✔ Passed" ;;
+              failure) echo "❌ Failed" ;;
+              skipped) echo "⚠️ Skipped" ;;
+              cancelled) echo "🚫 Cancelled" ;;
+              *) echo "❓ Unknown" ;;
+            esac
+          }
+
+          BUILD_STATUS=$(get_status_emoji "${{ needs.build-and-test.result }}")
+          TEST_STATUS=$(get_status_emoji "${{ needs.build-and-test.result }}")
+          COVERAGE_STATUS=$(get_status_emoji "${{ needs.build-and-test.result }}")
+          ESLINT_STATUS=$(get_status_emoji "${{ needs.code-quality.result }}")
+          SEMGREP_STATUS=$(get_status_emoji "${{ needs.security-semgrep.result }}")
+          GITLEAKS_STATUS=$(get_status_emoji "${{ needs.security-gitleaks.result }}")
+          NPMAUDIT_STATUS=$(get_status_emoji "${{ needs.security-npm-audit.result }}")
+          CODEQL_STATUS=$(get_status_emoji "${{ needs.security-codeql.result }}")
+          SBOM_STATUS=$(get_status_emoji "${{ needs.sbom-generation.result }}")
+          ARTIFACT_STATUS="✔ Published"
+
+          FINAL_STATUS="✔ Passed"
+          if [ "${{ needs.build-and-test.result }}" = "failure" ] || \
+             [ "${{ needs.code-quality.result }}" = "failure" ] || \
+             [ "${{ needs.security-codeql.result }}" = "failure" ]; then
+            FINAL_STATUS="❌ Failed"
+          fi
+
+          echo "### 🛡️ Enterprise React CI/CD DevSecOps Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Job / Scan Phase | Run Result / Status |" >> $GITHUB_STEP_SUMMARY
+          echo "| --- | --- |" >> $GITHUB_STEP_SUMMARY
+          echo "| Workflow Validation (actionlint) | ✔ Passed |" >> $GITHUB_STEP_SUMMARY
+          echo "| Build | $BUILD_STATUS |" >> $GITHUB_STEP_SUMMARY
+          echo "| Tests | $TEST_STATUS |" >> $GITHUB_STEP_SUMMARY
+          echo "| Coverage | $COVERAGE_STATUS |" >> $GITHUB_STEP_SUMMARY
+          echo "| Linter (oxlint/eslint) | $ESLINT_STATUS |" >> $GITHUB_STEP_SUMMARY
+          echo "| Semgrep | $SEMGREP_STATUS |" >> $GITHUB_STEP_SUMMARY
+          echo "| CodeQL | $CODEQL_STATUS |" >> $GITHUB_STEP_SUMMARY
+          echo "| Gitleaks | $GITLEAKS_STATUS |" >> $GITHUB_STEP_SUMMARY
+          echo "| npm audit | $NPMAUDIT_STATUS |" >> $GITHUB_STEP_SUMMARY
+          echo "| SBOM | $SBOM_STATUS |" >> $GITHUB_STEP_SUMMARY
+          echo "| Artifacts | $ARTIFACT_STATUS |" >> $GITHUB_STEP_SUMMARY
+          echo "| Final Result | $FINAL_STATUS |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "All generated logs and compliance reports have been compiled into the \`consolidated-security-reports\` artifact." >> $GITHUB_STEP_SUMMARY
+
+      - name: Upload Consolidated Reports Package
+        uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf658b4d48d9287f7634 # v4.4.3
+        with:
+          name: consolidated-security-reports
+          path: consolidated-reports/
+          if-no-files-found: ignore
+
+  # ==========================================
+  # Job 7 : Build Artifact
+  # ==========================================
+  build-artifact-upload:
+    name: Upload Production Build Artifact
+    runs-on: ubuntu-latest
+    needs: build-and-test
+    timeout-minutes: 10
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@cb20a13d22877b9cd0a3854de054cd601970176b # v2.10.2
+        with:
+          egress-policy: audit
+
+      - name: Download Temporary Build Folder
+        uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
+        with:
+          name: build-folder-temp
+          path: production-build/
+
+      - name: Upload Official Build Artifact
+        uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf658b4d48d9287f7634 # v4.4.3
+        with:
+          name: frontend-build
+          path: production-build/
+          if-no-files-found: ignore

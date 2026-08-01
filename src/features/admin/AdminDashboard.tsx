@@ -17,10 +17,12 @@ import StageDetailsPage from './pages/StageDetailsPage';
 import ActivityListPage from './activity/pages/ActivityListPage';
 import CreateActivityPage from './activity/pages/CreateActivityPage';
 import EditActivityPage from './activity/pages/EditActivityPage';
+import PageLoader from '../../components/common/PageLoader';
 import { LayoutDashboard, Activity, Users, AlertCircle, User, CalendarCheck, Award } from 'lucide-react';
 
 export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState(0);
+  const [isTabLoading, setIsTabLoading] = useState(false);
   const [viewStack, setViewStack] = useState<{name: string, props?: any}[]>([]);
 
   const pushView = (name: string, props?: any) => {
@@ -33,8 +35,12 @@ export default function AdminDashboard() {
 
   const handleTabClick = (idx: number) => {
     if (idx !== activeTab) {
+      setIsTabLoading(true);
       setActiveTab(idx);
       setViewStack([]);
+      setTimeout(() => {
+        setIsTabLoading(false);
+      }, 350);
     } else {
       setViewStack([]); // clicking same tab resets to root
     }
@@ -95,6 +101,7 @@ export default function AdminDashboard() {
 
   return (
     <div className="flex h-screen bg-slate-50 flex-col md:flex-row">
+      {isTabLoading && <PageLoader message={`Opening ${tabs[activeTab].name}...`} fullScreen={true} />}
       {/* Sidebar (Desktop) */}
       <div className="hidden md:flex w-64 flex-col bg-slate-900 text-white shadow-xl z-20">
         <div className="p-6 border-b border-slate-800">

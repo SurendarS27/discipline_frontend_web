@@ -93,7 +93,7 @@ export default function StudentListPage() {
                   </td>
                 </tr>
               ) : (
-                students.map((student) => (
+                students.map((student: any) => (
                   <tr key={student.id} className="hover:bg-slate-50 transition-colors group">
                     <td className="p-4">
                       <div className="flex items-center gap-3">
@@ -101,7 +101,11 @@ export default function StudentListPage() {
                           {student.fullName.charAt(0)}
                         </div>
                         <div>
-                          <p className="font-medium text-slate-900">{student.fullName}</p>
+                          <p className="font-medium text-slate-900 flex items-center gap-1.5">
+                            {student.teamRole === 'CAPTAIN' && <span className="text-amber-600 text-[10px] font-bold bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded">👑 Captain</span>}
+                            {student.teamRole === 'VICE_CAPTAIN' && <span className="text-slate-700 text-[10px] font-bold bg-slate-100 border border-slate-300 px-1.5 py-0.5 rounded">🥈 Vice Captain</span>}
+                            <span>{student.fullName}</span>
+                          </p>
                           <p className="text-xs text-slate-500">{student.email}</p>
                         </div>
                       </div>

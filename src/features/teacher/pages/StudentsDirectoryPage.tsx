@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Search, Plus, UserPlus, X, Trash2 } from 'lucide-react';
+import toast from 'react-hot-toast';
 import apiClient from '../../../services/apiClient';
+import studentService from '../../../services/studentService';
 
 export default function StudentsDirectoryPage() {
   const navigate = useNavigate();
@@ -226,15 +228,35 @@ export default function StudentsDirectoryPage() {
               </button>
             </div>
             
-            <form onSubmit={(e) => { e.preventDefault(); alert("Student registered successfully (UI Mock)"); setIsModalOpen(false); }} className="p-6 space-y-4">
+            <form onSubmit={async (e) => { 
+              e.preventDefault(); 
+              const form = e.currentTarget;
+              const formData = new FormData(form);
+              const data = {
+                fullName: formData.get("fullName"),
+                registerNumber: formData.get("registerNumber"),
+                email: formData.get("email"),
+                departmentId: formData.get("departmentId"),
+                section: formData.get("section"),
+                year: formData.get("year"),
+              };
+              try {
+                await studentService.createStudent(data);
+                toast.success("Student registered successfully");
+                setIsModalOpen(false);
+                fetchStudents();
+              } catch (err: any) {
+                toast.error(err.response?.data?.message || "Failed to register student");
+              }
+            }} className="p-6 space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-bold text-slate-500 mb-1">Student Name *</label>
-                  <input required className="w-full p-2.5 border border-slate-300 rounded-xl outline-none focus:border-teal-500 text-sm" placeholder="e.g. John Doe" />
+                  <input name="fullName" required className="w-full p-2.5 border border-slate-300 rounded-xl outline-none focus:border-teal-500 text-sm" placeholder="e.g. John Doe" />
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-slate-500 mb-1">Register Number * (reg_no)</label>
-                  <input required className="w-full p-2.5 border border-slate-300 rounded-xl outline-none focus:border-teal-500 text-sm" placeholder="e.g. 24IT001" />
+                  <input name="registerNumber" required className="w-full p-2.5 border border-slate-300 rounded-xl outline-none focus:border-teal-500 text-sm" placeholder="e.g. 24IT001" />
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-slate-500 mb-1">SPR Number (spr_no)</label>
@@ -242,7 +264,7 @@ export default function StudentsDirectoryPage() {
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-slate-500 mb-1">Email *</label>
-                  <input required type="email" className="w-full p-2.5 border border-slate-300 rounded-xl outline-none focus:border-teal-500 text-sm" placeholder="student@example.com" />
+                  <input name="email" required type="email" className="w-full p-2.5 border border-slate-300 rounded-xl outline-none focus:border-teal-500 text-sm" placeholder="student@example.com" />
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-slate-500 mb-1">Phone Number</label>

@@ -21,6 +21,8 @@ export default function LoginPage() {
   const navigate = useNavigate();
   const { login } = useAuth();
   const [error, setError] = useState<string | null>(null);
+  const [turnstileToken, setTurnstileToken] = useState<string>('');
+  const [turnstileReset, setTurnstileReset] = useState<number>(0);
 
   const {
     register,
@@ -38,7 +40,7 @@ export default function LoginPage() {
   const onSubmit = async (data: LoginFormValues) => {
     setError(null);
     try {
-      const response = await authService.login(data);
+      const response = await authService.login({ ...data, turnstileToken });
       const token = response.token || (response as any).accessToken || (response as any).jwt || '';
       if (token) {
         localStorage.setItem('spdms_token', token);
@@ -86,6 +88,8 @@ export default function LoginPage() {
       
     } catch (err: any) {
       setError(err.message || 'Connection failed. Ensure backend is running.');
+      setTurnstileReset((prev) => prev + 1);
+      setTurnstileToken('');
     }
   };
 
@@ -151,6 +155,8 @@ export default function LoginPage() {
             </div>
             {errors.password && <p className="mt-1 text-sm text-red-600">{errors.password.message}</p>}
           </div>
+
+
 
           <button
             type="submit"
