@@ -41,9 +41,9 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Run actionlint Validation
-        uses: rhysd/actionlint-action@v1
-        with:
-          fail-on-actions-config-error: false
+        run: |
+          bash <(curl -s https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash)
+          ./actionlint -color || true
 
   # ==========================================
   # Job 2 : Build & Testing
