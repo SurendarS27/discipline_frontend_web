@@ -22,7 +22,7 @@ export default function LoginPage() {
   const { login } = useAuth();
   const [error, setError] = useState<string | null>(null);
   const [turnstileToken, setTurnstileToken] = useState<string>('');
-  const [turnstileReset, setTurnstileReset] = useState<number>(0);
+  const [_turnstileReset, setTurnstileReset] = useState<number>(0);
 
   const {
     register,

@@ -150,6 +150,23 @@ jobs:
       - name: Build Application
         run: npm run build 2>&1 | tee build.log
 
+      - name: Find Build Output Directory
+        run: |
+          echo "=== Searching for build output ==="
+          find . -maxdepth 3 -name "index.html" -not -path "./node_modules/*" -not -path "./.git/*" 2>/dev/null | head -10
+          echo "=== Top-level dirs ==="
+          ls -la
+          BUILD_DIR=""
+          if [ -d "dist" ] && [ "$(ls -A dist 2>/dev/null)" ]; then
+            BUILD_DIR="dist"
+          elif [ -d "build" ] && [ "$(ls -A build 2>/dev/null)" ]; then
+            BUILD_DIR="build"
+          elif [ -d "out" ] && [ "$(ls -A out 2>/dev/null)" ]; then
+            BUILD_DIR="out"
+          fi
+          echo "BUILD_DIR=${BUILD_DIR}" >> $GITHUB_ENV
+          echo "Detected build output: ${BUILD_DIR:-'NOT FOUND'}"
+
       - name: Upload Build Log
         uses: actions/upload-artifact@v4
         if: always()
@@ -158,14 +175,12 @@ jobs:
           path: build.log
           if-no-files-found: ignore
 
-      # ── FIXED: Upload directly here, no temp artifact round-trip ──────────
       - name: Upload Frontend Build Artifact
         uses: actions/upload-artifact@v4
+        if: env.BUILD_DIR != ''
         with:
           name: frontend-build
-          path: |
-            dist/
-            build/
+          path: ${{ env.BUILD_DIR }}/
           if-no-files-found: warn
           retention-days: 7
 
@@ -183,32 +198,61 @@ jobs:
         with:
           egress-policy: audit
 
-      - name: Download Frontend Build
-        uses: actions/download-artifact@v4
-        with:
-          name: frontend-build
-          path: dist/
+      - name: Checkout Repository
+        uses: actions/checkout@v4
 
-      - name: Analyze Bundle Size
+      - name: Setup Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install Dependencies
         run: |
-          {
-            echo "## 📦 Bundle Size Report"
-            echo ""
-            echo "### Folder Breakdown"
-            echo '```'
-            du -sh dist/ && du -ah dist/ | sort -rh | head -30
-            echo '```'
-            echo ""
-            echo "### File Count"
-            echo '```'
-            find dist/ -type f | wc -l
-            echo " files total"
-            echo '```'
-          } | tee bundle-size-report.md
+          if [ -f "package-lock.json" ]; then npm ci; else npm install; fi
+
+      - name: Build Application
+        run: npm run build || true
+
+      - name: Detect Build Output & Analyze Bundle Size
+        run: |
+          BUILD_DIR=""
+          for d in dist build out; do
+            if [ -d "$d" ] && [ "$(ls -A $d 2>/dev/null)" ]; then
+              BUILD_DIR="$d"
+              break
+            fi
+          done
+
+          if [ -z "$BUILD_DIR" ]; then
+            echo "⚠️ No build output directory found" | tee bundle-size-report.md
+          else
+            {
+              echo "## 📦 Bundle Size Report"
+              echo ""
+              echo "**Build directory:** \`${BUILD_DIR}/\`"
+              echo ""
+              echo "### File Breakdown (top 30 by size)"
+              echo '```'
+              du -sh ${BUILD_DIR}/ && du -ah ${BUILD_DIR}/ | sort -rh | head -30
+              echo '```'
+              echo ""
+              echo "### Total File Count"
+              echo '```'
+              echo "$(find ${BUILD_DIR}/ -type f | wc -l) files"
+              echo '```'
+              echo ""
+              echo "### JS / CSS Sizes"
+              echo '```'
+              find ${BUILD_DIR}/ -name "*.js" -exec du -sh {} + 2>/dev/null | sort -rh | head -10 || echo "No JS files"
+              find ${BUILD_DIR}/ -name "*.css" -exec du -sh {} + 2>/dev/null | sort -rh | head -5 || echo "No CSS files"
+              echo '```'
+            } | tee bundle-size-report.md
+          fi
 
       - name: Check size-limit (if configured)
         run: |
-          if [ -f "package.json" ] && grep -q '"size-limit"' package.json 2>/dev/null; then
+          if grep -q '"size-limit"' package.json 2>/dev/null; then
             npx size-limit --json > size-limit-report.json || true
           else
             echo "size-limit not configured" > size-limit-report.json
@@ -402,27 +446,33 @@ jobs:
         run: |
           if [ -f "package-lock.json" ]; then npm ci; else npm install; fi
 
-      - name: Download Frontend Build
-        uses: actions/download-artifact@v4
-        with:
-          name: frontend-build
-          path: dist/
+      - name: Build Application
+        run: npm run build || true
 
       - name: Install Lighthouse CI
         run: npm install -g @lhci/cli
 
-      - name: Run Lighthouse CI
+      - name: Detect Build Dir & Run Lighthouse CI
         run: |
-          if [ -d "dist" ] && [ "$(ls -A dist)" ]; then
+          BUILD_DIR=""
+          for d in dist build out; do
+            if [ -d "$d" ] && [ "$(ls -A $d 2>/dev/null)" ]; then
+              BUILD_DIR="$d"
+              break
+            fi
+          done
+
+          if [ -n "$BUILD_DIR" ]; then
+            echo "🏠 Running Lighthouse against ./${BUILD_DIR}"
             lhci collect \
-              --staticDistDir=./dist \
+              --staticDistDir="./${BUILD_DIR}" \
               --numberOfRuns=1 \
               2>&1 | tee lhci-output.txt || true
             lhci assert \
               --preset=lighthouse:recommended \
               2>&1 | tee -a lhci-output.txt || true
           else
-            echo "No build output found — skipping Lighthouse" | tee lhci-output.txt
+            echo "⚠️ No build output directory found — skipping Lighthouse" | tee lhci-output.txt
           fi
         continue-on-error: true
 

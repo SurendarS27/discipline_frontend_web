@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Trophy, ChevronDown, FilterX, Medal, Star } from 'lucide-react';
+import { Trophy, ChevronDown, FilterX, Star } from 'lucide-react';
 import apiClient from '../../../services/apiClient';
 
 interface LeaderboardStudent {
