@@ -44,7 +44,7 @@ jobs:
         uses: reviewdog/action-actionlint@v1
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          fail_level: error
+          fail_level: warning
           filter_mode: nofilter
 
   # ==========================================
@@ -290,7 +290,7 @@ jobs:
 
       - name: Run Semgrep SAST Scan
         run: |
-          docker run --rm -v ${{ github.workspace }}:/src -w /src semgrep/semgrep semgrep scan --config ${{ env.SEMGREP_RULES }} --json-output=semgrep.json --sarif-output=semgrep.sarif || true
+          docker run --rm -v "${{ github.workspace }}:/src" -w /src semgrep/semgrep semgrep scan --config "${{ env.SEMGREP_RULES }}" --json-output=semgrep.json --sarif-output=semgrep.sarif || true
 
       - name: Upload Semgrep JSON/SARIF Reports
         uses: actions/upload-artifact@v4
@@ -334,11 +334,11 @@ jobs:
         id: detect-mode
         run: |
           if [ -f "tsconfig.json" ] || grep -q '"build"' package.json; then
-            echo "mode=manual" >> $GITHUB_OUTPUT
-            echo "run_build=true" >> $GITHUB_OUTPUT
+            echo "mode=manual" >> "$GITHUB_OUTPUT"
+            echo "run_build=true" >> "$GITHUB_OUTPUT"
           else
-            echo "mode=none" >> $GITHUB_OUTPUT
-            echo "run_build=false" >> $GITHUB_OUTPUT
+            echo "mode=none" >> "$GITHUB_OUTPUT"
+            echo "run_build=false" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Initialize CodeQL
@@ -527,24 +527,26 @@ jobs:
             FINAL_STATUS="❌ Failed"
           fi
 
-          echo "### 🛡️ Enterprise React CI/CD DevSecOps Summary" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "| Job / Scan Phase | Run Result / Status |" >> $GITHUB_STEP_SUMMARY
-          echo "| --- | --- |" >> $GITHUB_STEP_SUMMARY
-          echo "| Workflow Validation (actionlint) | ✔ Passed |" >> $GITHUB_STEP_SUMMARY
-          echo "| Build | $BUILD_STATUS |" >> $GITHUB_STEP_SUMMARY
-          echo "| Tests | $TEST_STATUS |" >> $GITHUB_STEP_SUMMARY
-          echo "| Coverage | $COVERAGE_STATUS |" >> $GITHUB_STEP_SUMMARY
-          echo "| Linter (oxlint/eslint) | $ESLINT_STATUS |" >> $GITHUB_STEP_SUMMARY
-          echo "| Semgrep | $SEMGREP_STATUS |" >> $GITHUB_STEP_SUMMARY
-          echo "| CodeQL | $CODEQL_STATUS |" >> $GITHUB_STEP_SUMMARY
-          echo "| Gitleaks | $GITLEAKS_STATUS |" >> $GITHUB_STEP_SUMMARY
-          echo "| npm audit | $NPMAUDIT_STATUS |" >> $GITHUB_STEP_SUMMARY
-          echo "| SBOM | $SBOM_STATUS |" >> $GITHUB_STEP_SUMMARY
-          echo "| Artifacts | $ARTIFACT_STATUS |" >> $GITHUB_STEP_SUMMARY
-          echo "| Final Result | $FINAL_STATUS |" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "All generated logs and compliance reports have been compiled into the \`consolidated-security-reports\` artifact." >> $GITHUB_STEP_SUMMARY
+          {
+            echo "### 🛡️ Enterprise React CI/CD DevSecOps Summary"
+            echo ""
+            echo "| Job / Scan Phase | Run Result / Status |"
+            echo "| --- | --- |"
+            echo "| Workflow Validation (actionlint) | ✔ Passed |"
+            echo "| Build | ${BUILD_STATUS} |"
+            echo "| Tests | ${TEST_STATUS} |"
+            echo "| Coverage | ${COVERAGE_STATUS} |"
+            echo "| Linter (oxlint/eslint) | ${ESLINT_STATUS} |"
+            echo "| Semgrep | ${SEMGREP_STATUS} |"
+            echo "| CodeQL | ${CODEQL_STATUS} |"
+            echo "| Gitleaks | ${GITLEAKS_STATUS} |"
+            echo "| npm audit | ${NPMAUDIT_STATUS} |"
+            echo "| SBOM | ${SBOM_STATUS} |"
+            echo "| Artifacts | ${ARTIFACT_STATUS} |"
+            echo "| Final Result | ${FINAL_STATUS} |"
+            echo ""
+            echo "All generated logs and compliance reports have been compiled into the \`consolidated-security-reports\` artifact."
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload Consolidated Reports Package
         uses: actions/upload-artifact@v4
