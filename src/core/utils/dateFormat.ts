@@ -11,7 +11,7 @@ export const formatDate = (isoString?: string | Date | null): string => {
       month: 'short',
       year: 'numeric',
     });
-  } catch (_) {
+  } catch (_err) {
     return 'N/A';
   }
 };

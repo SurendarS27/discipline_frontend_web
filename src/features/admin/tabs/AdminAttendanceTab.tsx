@@ -100,7 +100,7 @@ export default function AdminAttendanceTab({ onBack }: Props) {
       let response;
       try {
         response = await apiClient.get(`/api/admin/attendance/summary?${params.toString()}`);
-      } catch (e) {
+      } catch (_e) {
         response = await apiClient.get(`/api/v1/admin/attendance/summary?${params.toString()}`);
       }
 

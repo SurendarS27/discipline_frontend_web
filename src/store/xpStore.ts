@@ -96,8 +96,7 @@ export const useXpStore = create<XpState>((set) => ({
       if (response.data.success && response.data.data) {
         set({ history: response.data.data.content || [] });
       }
-    } catch (error) {
-      console.error('Failed to fetch history, using mock');
+    } catch (_error) {
       // fallback handled by default mock data
     } finally {
       set({ isLoading: false });
@@ -111,8 +110,7 @@ export const useXpStore = create<XpState>((set) => ({
       if (response.data.success && response.data.data) {
         set({ streaks: response.data.data || [] });
       }
-    } catch (error) {
-      console.error('Failed to fetch streaks, using mock');
+    } catch (_error) {
       // fallback handled by default mock data
     } finally {
       set({ isLoading: false });

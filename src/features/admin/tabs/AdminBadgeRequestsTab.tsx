@@ -26,7 +26,7 @@ export default function AdminBadgeRequestsTab({ onBack }: Props) {
       let response;
       try {
         response = await apiClient.get('/api/admin/badge-requests');
-      } catch (e) {
+      } catch (_e) {
         response = await apiClient.get('/api/v1/admin/badge-requests');
       }
 
@@ -55,7 +55,7 @@ export default function AdminBadgeRequestsTab({ onBack }: Props) {
       let response;
       try {
         response = await apiClient.put(`/api/admin/badge-requests/${id}/approve`);
-      } catch (e) {
+      } catch (_e) {
         response = await apiClient.put(`/api/v1/admin/badge-requests/${id}/approve`);
       }
       toast.dismiss(toastId);
@@ -80,7 +80,7 @@ export default function AdminBadgeRequestsTab({ onBack }: Props) {
         response = await apiClient.put(`/api/admin/badge-requests/${rejectingReq.id}/reject`, {
           reason: rejectReason
         });
-      } catch (e) {
+      } catch (_e) {
         response = await apiClient.put(`/api/v1/admin/badge-requests/${rejectingReq.id}/reject`, {
           reason: rejectReason
         });

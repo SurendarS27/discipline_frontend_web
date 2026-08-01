@@ -19,6 +19,7 @@ export function useApi<T = any>(apiCall: () => Promise<any>, deps: any[] = []) {
     } finally {
       setLoading(false);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, deps);
 
   useEffect(() => {
