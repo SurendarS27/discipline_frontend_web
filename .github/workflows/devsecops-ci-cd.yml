@@ -121,30 +121,38 @@ jobs:
         run: |
           if [ -f "package-lock.json" ]; then npm ci; else npm install; fi
 
-      - name: Run Test Suite
+      - name: Run Test Suite (Vitest + JUnit + Coverage)
         run: |
-          if grep -q '"vitest"' package.json; then
-            echo "🧪 Framework: Vitest"
-            npx vitest run --reporter=default --reporter=junit --outputFile=junit.xml || true
-          elif grep -q '"jest"' package.json; then
-            echo "🧪 Framework: Jest"
+          if grep -q '"vitest"' package.json 2>/dev/null; then
+            echo "🧪 Framework: Vitest detected"
+            npm run test:ci 2>&1 | tee test-output.txt || true
+          elif grep -q '"jest"' package.json 2>/dev/null; then
+            echo "🧪 Framework: Jest detected"
             npm install --no-save jest-junit
-            npx jest --reporters=default --reporters=jest-junit || true
-          elif grep -q '"test"' package.json; then
-            echo "🧪 Running npm test"
-            npm test || true
+            npx jest --coverage --reporters=default --reporters=jest-junit 2>&1 | tee test-output.txt || true
+          elif grep -q '"test"' package.json 2>/dev/null; then
+            echo "🧪 Running: npm test"
+            npm test 2>&1 | tee test-output.txt || true
           else
-            echo "No test framework configured — skipping"
+            echo "⚠️ No test framework configured"
             echo '<testsuites name="no-tests"/>' > junit.xml
           fi
         continue-on-error: true
 
-      - name: Upload Test Report
+      - name: Upload Test Report (JUnit XML)
         uses: actions/upload-artifact@v4
         if: always()
         with:
           name: test-report
           path: junit.xml
+          if-no-files-found: ignore
+
+      - name: Upload Coverage Report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-report
+          path: coverage/
           if-no-files-found: ignore
 
       - name: Build Application
@@ -296,16 +304,24 @@ jobs:
         run: |
           if [ -f "package-lock.json" ]; then npm ci; else npm install; fi
 
-      - name: Run ESLint
+      - name: Run Linter (oxlint + ESLint fallback)
         run: |
-          if grep -q '"eslint"' package.json 2>/dev/null; then
-            npx eslint . --format json --output-file eslint-report.json || true
-            npx eslint . || true
+          # PragatiX uses oxlint as primary linter
+          if grep -q '"lint:report"' package.json 2>/dev/null; then
+            echo "🔍 Using oxlint (npm run lint:report)"
+            npm run lint:report 2>&1 | tee oxlint-output.txt || true
+            # Alias for artifact naming consistency
+            cp oxlint-report.json eslint-report.json 2>/dev/null || echo "[]" > eslint-report.json
+          elif grep -q '"eslint"' package.json 2>/dev/null; then
+            echo "🔍 Using ESLint"
+            npx eslint . --format json --output-file eslint-report.json 2>&1 || true
+            npx eslint . 2>&1 || true
           elif grep -q '"lint"' package.json 2>/dev/null; then
-            npm run lint || true
+            echo "🔍 Running: npm run lint"
+            npm run lint 2>&1 || true
             echo "[]" > eslint-report.json
           else
-            echo "ESLint not configured"
+            echo "⚠️ No linter configured"
             echo "[]" > eslint-report.json
           fi
         continue-on-error: true
@@ -326,6 +342,8 @@ jobs:
           name: code-quality-report
           path: |
             eslint-report.json
+            oxlint-report.json
+            oxlint-output.txt
             prettier-report.txt
           if-no-files-found: ignore
 
@@ -463,14 +481,24 @@ jobs:
           done
 
           if [ -n "$BUILD_DIR" ]; then
-            echo "🏠 Running Lighthouse against ./${BUILD_DIR}"
-            lhci collect \
-              --staticDistDir="./${BUILD_DIR}" \
-              --numberOfRuns=1 \
-              2>&1 | tee lhci-output.txt || true
-            lhci assert \
-              --preset=lighthouse:recommended \
-              2>&1 | tee -a lhci-output.txt || true
+            echo "🏠 Build dir: ./${BUILD_DIR}"
+            if [ -f ".lighthouserc.json" ]; then
+              # Use project-specific lighthouserc.json config (supports --no-sandbox for CI)
+              echo "Using .lighthouserc.json config"
+              lhci autorun \
+                --config=./.lighthouserc.json \
+                2>&1 | tee lhci-output.txt || true
+            else
+              # Fallback: inline config
+              lhci collect \
+                --staticDistDir="./${BUILD_DIR}" \
+                --numberOfRuns=1 \
+                --settings.chromeFlags="--no-sandbox --headless --disable-gpu" \
+                2>&1 | tee lhci-output.txt || true
+              lhci assert \
+                --preset=lighthouse:recommended \
+                2>&1 | tee -a lhci-output.txt || true
+            fi
           else
             echo "⚠️ No build output directory found — skipping Lighthouse" | tee lhci-output.txt
           fi

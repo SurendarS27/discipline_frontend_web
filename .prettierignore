@@ -1,0 +1,10 @@
+# .prettierignore
+node_modules/
+dist/
+build/
+coverage/
+.lighthouseci/
+*.lock
+package-lock.json
+*.min.js
+*.min.css
