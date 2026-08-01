@@ -77,7 +77,7 @@ jobs:
           fi
 
       - name: Submit Dependency Graph
-        uses: github/dependency-submission-action@v1
+        uses: actions/dependency-submission-action@v1
         continue-on-error: true
 
       - name: Build Application
