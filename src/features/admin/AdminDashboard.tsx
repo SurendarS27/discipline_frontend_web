@@ -17,6 +17,7 @@ import StageDetailsPage from './pages/StageDetailsPage';
 import ActivityListPage from './activity/pages/ActivityListPage';
 import CreateActivityPage from './activity/pages/CreateActivityPage';
 import EditActivityPage from './activity/pages/EditActivityPage';
+import AssignFacultyPage from './activity/pages/AssignFacultyPage';
 import PageLoader from '../../components/common/PageLoader';
 import { LayoutDashboard, Activity, Users, AlertCircle, User, CalendarCheck, Award } from 'lucide-react';
 
@@ -94,6 +95,8 @@ export default function AdminDashboard() {
         return <CreateActivityPage onBack={popView} subgroupId={currentView.props?.subgroupId} stageId={currentView.props?.stageId} subgroupName={currentView.props?.subgroupName} />;
       case 'edit_activity':
         return <EditActivityPage onBack={popView} activity={currentView.props?.activity} />;
+      case 'assign_faculty':
+        return <AssignFacultyPage activity={currentView.props?.activity} onBack={popView} />;
       default:
         return renderActiveTabComponent();
     }

@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { ApiConfig } from '../config/apiConfig';
 
-const baseURL = import.meta.env.VITE_API_BASE_URL || ApiConfig.baseUrl || 'http://localhost:8080';
+const baseURL = import.meta.env.VITE_API_BASE_URL || ApiConfig.baseUrl || 'https://www.pragatix.in';
 
 
 export const apiClient = axios.create({

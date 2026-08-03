@@ -1,8 +1,11 @@
 import { useState, useEffect } from 'react';
-import { ArrowLeft, Plus, Edit2, Trash2, RefreshCw, UserPlus, X, Star, User, Users, ChevronRight, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Plus, RefreshCw, X, Star, User, Users, ChevronRight, ChevronDown, AlertCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 import apiClient from '../../../services/apiClient';
 import ConfirmationModal from '../../../components/common/ConfirmationModal';
+import ActivityCard from '../activity/components/ActivityCard';
+import { activityService } from '../activity/api/activityService';
+import type { ActivityModel } from '../activity/types/ActivityTypes';
 
 interface Props {
   stageId: number;
@@ -17,7 +20,6 @@ export default function StageDetailsPage({
   stageId, 
   stageName, 
   stageDescription = '', 
-  teachersList = [],
   onBack,
   onPushView = () => {} 
 }: Props) {
@@ -34,15 +36,70 @@ export default function StageDetailsPage({
     threshold: '150'
   });
 
-  const [isFacultyModalOpen, setIsFacultyModalOpen] = useState(false);
-  const [selectedSubgroupForFaculty, setSelectedSubgroupForFaculty] = useState<any>(null);
-  const [selectedFacultyId, setSelectedFacultyId] = useState<string>('');
+
 
   const [deleteConfirmModal, setDeleteConfirmModal] = useState<{ open: boolean; subId: number | null; subName: string }>({
     open: false,
     subId: null,
     subName: ''
   });
+
+  const [expandedSubgroups, setExpandedSubgroups] = useState<Record<number, boolean>>({});
+  const [subgroupActivities, setSubgroupActivities] = useState<Record<number, ActivityModel[]>>({});
+  const [subgroupLoading, setSubgroupLoading] = useState<Record<number, boolean>>({});
+  const [deleteActivityTarget, setDeleteActivityTarget] = useState<ActivityModel | null>(null);
+  const [unmapActivityTarget, setUnmapActivityTarget] = useState<ActivityModel | null>(null);
+
+  const toggleSubgroupExpand = async (sub: any) => {
+    const subId = sub.id || 1;
+    const isCurrentlyExpanded = !!expandedSubgroups[subId];
+    
+    setExpandedSubgroups(prev => ({ ...prev, [subId]: !isCurrentlyExpanded }));
+
+    if (!isCurrentlyExpanded && !subgroupActivities[subId]) {
+      setSubgroupLoading(prev => ({ ...prev, [subId]: true }));
+      try {
+        const acts = await activityService.fetchActivities(subId, stageId, sub.name);
+        setSubgroupActivities(prev => ({ ...prev, [subId]: acts || [] }));
+      } catch (err) {
+        console.error("Failed to load subgroup activities:", err);
+      } finally {
+        setSubgroupLoading(prev => ({ ...prev, [subId]: false }));
+      }
+    }
+  };
+
+  const handleUnmapConfirm = async () => {
+    if (!unmapActivityTarget || !stageId) return;
+    const toastId = toast.loading("Removing activity from stage...");
+    try {
+      await activityService.unmapActivityFromStage(Number(stageId), unmapActivityTarget.id);
+      toast.dismiss(toastId);
+      toast.success("Activity removed from stage successfully");
+      setUnmapActivityTarget(null);
+      fetchSubgroups();
+    } catch (err: any) {
+      toast.dismiss(toastId);
+      console.error(err);
+      toast.error(err.response?.data?.message || 'Failed to remove activity from stage');
+    }
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!deleteActivityTarget) return;
+    const toastId = toast.loading("Deleting activity from system...");
+    try {
+      await activityService.deleteActivity(deleteActivityTarget.id);
+      toast.dismiss(toastId);
+      toast.success("Activity deleted from system successfully");
+      setDeleteActivityTarget(null);
+      fetchSubgroups();
+    } catch (err: any) {
+      toast.dismiss(toastId);
+      console.error(err);
+      toast.error(err.response?.data?.message || 'Failed to delete activity from system');
+    }
+  };
 
   const openModal = (sub: any = null) => {
     setEditingSubgroup(sub);
@@ -158,14 +215,6 @@ export default function StageDetailsPage({
     }
   };
 
-  const triggerDelete = (sub: any) => {
-    setDeleteConfirmModal({
-      open: true,
-      subId: sub.id,
-      subName: sub.name || 'this subgroup'
-    });
-  };
-
   const confirmDeleteSubgroup = async () => {
     const { subId } = deleteConfirmModal;
     if (!subId) return;
@@ -186,29 +235,7 @@ export default function StageDetailsPage({
     }
   };
 
-  const openFacultyModal = (sub: any) => {
-    setSelectedSubgroupForFaculty(sub);
-    setSelectedFacultyId('');
-    setIsFacultyModalOpen(true);
-  };
 
-  const handleAssignFaculty = async () => {
-    if (!selectedFacultyId || !selectedSubgroupForFaculty) return;
-    const toastId = toast.loading("Assigning faculty...");
-    try {
-      if (selectedSubgroupForFaculty.id > 10) {
-        await apiClient.put(`/api/v1/admin/stages/${stageId}/subgroups/${selectedSubgroupForFaculty.id}/assign?facultyId=${selectedFacultyId}`);
-      }
-      toast.dismiss(toastId);
-      toast.success("Faculty assigned successfully!");
-      setIsFacultyModalOpen(false);
-      fetchSubgroups();
-    } catch (e: any) {
-      toast.dismiss(toastId);
-      console.error(e);
-      toast.error(e.response?.data?.message || 'Failed to assign faculty');
-    }
-  };
 
   const displayName = stageDetails?.name || stageName;
   const displayDesc = stageDetails?.description || stageDescription;
@@ -306,52 +333,96 @@ export default function StageDetailsPage({
           ) : (
             <div className="space-y-3">
               {subgroups.map((sub, idx) => {
+                const subId = sub.id || (idx + 1);
                 const subName = sub.name || `Subgroup ${idx + 1}`;
                 const catLower = (sub.category || subName || '').toLowerCase();
                 const IconComponent = catLower.includes('must') ? Star : (catLower.includes('group') ? Users : User);
-                
+                const isExpanded = !!expandedSubgroups[subId];
+                const acts = subgroupActivities[subId] || [];
+                const isActLoading = !!subgroupLoading[subId];
+
                 return (
-                  <div 
-                    key={sub.id || idx}
-                    onClick={() => onPushView('activity_list', { 
-                      subgroup: sub, 
-                      subgroupId: sub.id, 
-                      stageId: stageId, 
-                      subgroupName: subName 
-                    })}
-                    className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 hover:border-blue-300 transition-all flex items-center justify-between cursor-pointer group"
-                  >
-                    <div className="flex items-center space-x-4">
-                      <div className="w-10 h-10 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-700 group-hover:bg-blue-50 group-hover:text-blue-600 transition-colors">
-                        <IconComponent className="w-5 h-5" />
+                  <div key={subId} className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden transition-all">
+                    {/* Subgroup Header Card - ONLY displays subgroup info & chevron (NO Assign/Edit/Delete on card!) */}
+                    <div 
+                      onClick={() => toggleSubgroupExpand(sub)}
+                      className="p-5 flex items-center justify-between cursor-pointer hover:bg-slate-50 transition-colors"
+                    >
+                      <div className="flex items-center space-x-4">
+                        <div className="w-10 h-10 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-700">
+                          <IconComponent className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <h4 className="font-bold text-base text-slate-900">{subName}</h4>
+                          <p className="text-xs text-slate-500 mt-0.5 font-medium">
+                            Threshold: {sub.threshold || 150} XP
+                          </p>
+                        </div>
                       </div>
-                      <div>
-                        <h4 className="font-bold text-base text-slate-900">{subName}</h4>
+
+                      <div className="flex items-center space-x-3">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onPushView('activity_list', { 
+                              subgroup: sub, 
+                              subgroupId: subId, 
+                              stageId: stageId, 
+                              subgroupName: subName 
+                            });
+                          }}
+                          className="text-xs font-bold px-3 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-full transition-colors"
+                        >
+                          View Full List
+                        </button>
+                        <div className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg">
+                          {isExpanded ? <ChevronDown className="w-5 h-5 text-slate-600" /> : <ChevronRight className="w-5 h-5 text-slate-400" />}
+                        </div>
                       </div>
                     </div>
 
-                    <div className="flex items-center space-x-2">
-                      <button 
-                        onClick={(e) => { e.stopPropagation(); openFacultyModal(sub); }}
-                        className="hidden sm:flex px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition-colors items-center"
-                      >
-                        <UserPlus className="w-3.5 h-3.5 mr-1 text-slate-500" /> 
-                        {sub.faculty ? 'Faculty' : 'Assign'}
-                      </button>
-                      <button 
-                        onClick={(e) => { e.stopPropagation(); openModal(sub); }}
-                        className="p-2 text-slate-400 hover:text-slate-600 rounded-lg"
-                      >
-                        <Edit2 className="w-4 h-4" />
-                      </button>
-                      <button 
-                        onClick={(e) => { e.stopPropagation(); triggerDelete(sub); }}
-                        className="p-2 text-rose-400 hover:text-rose-600 rounded-lg"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                      <ChevronRight className="w-5 h-5 text-slate-300 group-hover:text-slate-600 transition-colors" />
-                    </div>
+                    {/* Expanded Content: Activities belonging to this Subgroup */}
+                    {isExpanded && (
+                      <div className="border-t border-slate-100 bg-slate-50/50 p-4 space-y-3">
+                        {isActLoading ? (
+                          <div className="flex justify-center py-6">
+                            <RefreshCw className="w-6 h-6 animate-spin text-blue-500" />
+                          </div>
+                        ) : acts.length === 0 ? (
+                          <div className="text-center py-6 text-slate-500 text-sm">
+                            <p className="font-medium text-slate-700 mb-1">No activities in this category yet.</p>
+                            <button
+                              onClick={() => onPushView('create_activity', { subgroupId: subId, stageId, subgroupName: subName })}
+                              className="text-xs font-bold text-blue-600 hover:underline mt-1 inline-flex items-center gap-1"
+                            >
+                              <Plus className="w-3.5 h-3.5" /> Add First Activity
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="space-y-3">
+                            <div className="flex justify-between items-center px-1 mb-2">
+                              <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Activities in {subName}</span>
+                              <button
+                                onClick={() => onPushView('create_activity', { subgroupId: subId, stageId, subgroupName: subName })}
+                                className="flex items-center gap-1 bg-[#EA4335] text-white hover:bg-red-600 px-3 py-1 rounded-lg text-xs font-bold transition-colors"
+                              >
+                                <Plus className="w-3.5 h-3.5" /> Add Activity
+                              </button>
+                            </div>
+                            {acts.map((activity) => (
+                              <ActivityCard
+                                key={activity.id}
+                                activity={activity}
+                                onEdit={() => onPushView('edit_activity', { activity, subgroupId: subId })}
+                                onDelete={() => setDeleteActivityTarget(activity)}
+                                onUnmap={() => setUnmapActivityTarget(activity)}
+                                onAssign={() => onPushView('assign_faculty', { activity, subgroupId: subId })}
+                              />
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 );
               })}
@@ -422,43 +493,9 @@ export default function StageDetailsPage({
         </div>
       )}
 
-      {/* Assign Faculty Modal */}
-      {isFacultyModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl w-full max-w-md overflow-hidden flex flex-col shadow-2xl">
-            <div className="p-5 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-              <h2 className="text-lg font-bold text-slate-800">Assign Faculty</h2>
-              <button onClick={() => setIsFacultyModalOpen(false)} className="p-1.5 text-slate-400 hover:bg-slate-200 rounded-full">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            
-            <div className="p-6 space-y-4">
-              <p className="text-xs text-slate-600">Assign a faculty member to manage <strong>{selectedSubgroupForFaculty?.name}</strong>.</p>
-              <div className="space-y-1">
-                <label className="text-xs font-bold text-slate-700">Select Faculty *</label>
-                <select value={selectedFacultyId} onChange={e => setSelectedFacultyId(e.target.value)} className="w-full p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none bg-white text-sm">
-                  <option value="">-- Select Teacher --</option>
-                  {teachersList.map(t => (
-                    <option key={t.id} value={t.id}>{t.fullName || t.username}</option>
-                  ))}
-                </select>
-              </div>
-              
-              <div className="mt-6 flex justify-end space-x-3 pt-4 border-t border-slate-100">
-                <button type="button" onClick={() => setIsFacultyModalOpen(false)} className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl">
-                  Cancel
-                </button>
-                <button onClick={handleAssignFaculty} disabled={!selectedFacultyId} className="px-5 py-2 bg-blue-600 text-white text-xs font-bold rounded-xl hover:bg-blue-700 shadow-md disabled:opacity-50">
-                  Assign
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
 
-      {/* Delete Confirmation Modal */}
+
+      {/* Delete Subgroup Confirmation Modal */}
       <ConfirmationModal
         isOpen={deleteConfirmModal.open}
         title="Delete Subgroup"
@@ -469,6 +506,58 @@ export default function StageDetailsPage({
         onConfirm={confirmDeleteSubgroup}
         onCancel={() => setDeleteConfirmModal({ open: false, subId: null, subName: '' })}
       />
+
+      {/* Remove Activity from Stage Dialog */}
+      {unmapActivityTarget && (
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl w-full max-w-sm p-6 shadow-2xl space-y-4">
+            <h3 className="text-lg font-bold text-slate-900">Remove Activity</h3>
+            <p className="text-sm text-slate-600 leading-relaxed">
+              Are you sure you want to remove <strong>'{unmapActivityTarget.name}'</strong> from this stage?
+            </p>
+            <div className="flex justify-end space-x-3 pt-2">
+              <button 
+                onClick={() => setUnmapActivityTarget(null)}
+                className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={handleUnmapConfirm}
+                className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-xl shadow-md transition-colors"
+              >
+                Remove from Stage
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Activity from System Dialog */}
+      {deleteActivityTarget && (
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl w-full max-w-sm p-6 shadow-2xl space-y-4">
+            <h3 className="text-lg font-bold text-slate-900">Delete from System</h3>
+            <p className="text-sm text-slate-600 leading-relaxed">
+              Are you sure you want to completely delete <strong>'{deleteActivityTarget.name}'</strong> from the entire system? This is permanent.
+            </p>
+            <div className="flex justify-end space-x-3 pt-2">
+              <button 
+                onClick={() => setDeleteActivityTarget(null)}
+                className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={handleDeleteConfirm}
+                className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-xl shadow-md transition-colors"
+              >
+                Delete Everywhere
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
